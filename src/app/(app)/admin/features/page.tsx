@@ -8,12 +8,20 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Trash2, Settings2, Target } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Trash2, Settings2, Target } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import {
+  COMPANY_DASHBOARD_VIEW_OPTIONS,
+  DEFAULT_COMPANY_DASHBOARD_SETTINGS,
+  normalizeCompanyDashboardSettings,
+  type CompanyDashboardSettings,
+  type CompanyDashboardView,
+} from '@/lib/company-dashboard';
 
 export type FeatureSettings = {
   id: string;
@@ -46,6 +54,8 @@ export default function FeaturesPage() {
   
   const [featureSettings, setFeatureSettings] = useState<FeatureSettings | null>(null);
   const [findingLevelsSettings, setFindingLevelsSettings] = useState<FindingLevelsSettings | null>(null);
+  const [dashboardSettings, setDashboardSettings] = useState<CompanyDashboardSettings>(DEFAULT_COMPANY_DASHBOARD_SETTINGS);
+  const [isSavingDashboard, setIsSavingDashboard] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const [newLevelName, setNewLevelName] = useState('');
@@ -69,6 +79,7 @@ export default function FeaturesPage() {
 
         setFeatureSettings(featureConfig);
         setFindingLevelsSettings(levelsConfig);
+        setDashboardSettings(normalizeCompanyDashboardSettings(config['company-dashboard-settings']));
         const initialColors = (levelsConfig.levels || []).reduce((acc: Record<string, { bg: string, fg: string }>, l: { id: string; color: string; foregroundColor?: string }) => {
             acc[l.id] = { bg: l.color, fg: l.foregroundColor || '#ffffff' };
             return acc;
@@ -83,7 +94,7 @@ export default function FeaturesPage() {
 
   useEffect(() => {
     void loadData();
-    const events = ['safeviate-feature-settings-updated', 'safeviate-finding-levels-updated'];
+    const events = ['safeviate-feature-settings-updated', 'safeviate-finding-levels-updated', 'safeviate-tenant-config-updated'];
     events.forEach(e => window.addEventListener(e, loadData));
     return () => events.forEach(e => window.removeEventListener(e, loadData));
   }, [loadData]);
@@ -133,6 +144,40 @@ export default function FeaturesPage() {
       }),
     }).catch(() => {});
     window.dispatchEvent(new Event('safeviate-feature-settings-updated'));
+  };
+
+  const saveDashboardSettings = async (nextSettings: CompanyDashboardSettings) => {
+    const previousSettings = dashboardSettings;
+    setDashboardSettings(nextSettings);
+    setIsSavingDashboard(true);
+
+    try {
+      const response = await fetch('/api/tenant-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config: { 'company-dashboard-settings': nextSettings } }),
+      });
+      if (!response.ok) throw new Error('Unable to save dashboard settings');
+      window.dispatchEvent(new Event('safeviate-tenant-config-updated'));
+      toast({ title: 'Dashboard modules updated', description: 'The company dashboard now reflects this tenant configuration.' });
+    } catch {
+      setDashboardSettings(previousSettings);
+      toast({ variant: 'destructive', title: 'Dashboard settings were not saved', description: 'Please try again.' });
+    } finally {
+      setIsSavingDashboard(false);
+    }
+  };
+
+  const toggleDashboardView = (view: Exclude<CompanyDashboardView, 'overview'>, checked: boolean) => {
+    const enabledViews = checked
+      ? [...new Set([...dashboardSettings.enabledViews, view])]
+      : dashboardSettings.enabledViews.filter((enabledView) => enabledView !== view);
+    const normalized = normalizeCompanyDashboardSettings({
+      ...dashboardSettings,
+      enabledViews,
+      defaultView: dashboardSettings.defaultView === view && !checked ? 'overview' : dashboardSettings.defaultView,
+    });
+    void saveDashboardSettings(normalized);
   };
   
   const handleAddLevel = () => {
@@ -279,6 +324,64 @@ export default function FeaturesPage() {
                         />
                     </div>
                 </div>
+            </div>
+          </section>
+
+          <Separator />
+
+          <section className="space-y-4">
+            <div className="space-y-1">
+              <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                <LayoutDashboard className="h-4 w-4" />
+                Company Dashboard
+              </h3>
+              <p className="text-xs text-muted-foreground italic font-medium">
+                Select the dashboard modules this tenant uses. Overview always remains available and does not show aviation metrics by itself.
+              </p>
+            </div>
+
+            <div className="rounded-xl border bg-background overflow-hidden">
+              <div className="divide-y">
+                {COMPANY_DASHBOARD_VIEW_OPTIONS.map((view) => {
+                  const enabled = dashboardSettings.enabledViews.includes(view.value);
+                  return (
+                    <div key={view.value} className="flex items-center justify-between gap-4 p-4">
+                      <div className="space-y-1">
+                        <Label htmlFor={`dashboard-${view.value}`} className="text-sm font-black uppercase tracking-tight">
+                          {view.label}
+                        </Label>
+                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">{view.description}</p>
+                      </div>
+                      <Switch
+                        id={`dashboard-${view.value}`}
+                        checked={enabled}
+                        disabled={isSavingDashboard}
+                        onCheckedChange={(checked) => toggleDashboardView(view.value, checked)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex flex-col gap-2 border-t bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <Label htmlFor="dashboard-default-view" className="text-sm font-black uppercase tracking-tight">Default Dashboard View</Label>
+                  <p className="text-xs text-muted-foreground">The first dashboard area shown when a user opens Company Dashboard.</p>
+                </div>
+                <Select
+                  value={dashboardSettings.defaultView}
+                  disabled={isSavingDashboard}
+                  onValueChange={(value) => void saveDashboardSettings(normalizeCompanyDashboardSettings({ ...dashboardSettings, defaultView: value }))}
+                >
+                  <SelectTrigger id="dashboard-default-view" className="w-full sm:w-56"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {dashboardSettings.enabledViews.map((view) => (
+                      <SelectItem key={view} value={view}>
+                        {view === 'overview' ? 'Overview' : COMPANY_DASHBOARD_VIEW_OPTIONS.find((option) => option.value === view)?.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </section>
 

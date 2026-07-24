@@ -43,8 +43,10 @@ import type { SafetyReport } from '@/types/safety-report';
 import type { QuickSafetyReport, TechnicalQuickReport } from '@/types/quick-reports';
 import type { InstructorHourWarningSettings, MilestoneWarning, StudentMilestoneSettings, StudentProgressReport } from '@/types/training';
 import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
+import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { COMPANY_DASHBOARD_VIEW_OPTIONS, normalizeCompanyDashboardSettings } from '@/lib/company-dashboard';
 
 type IndustryTab = { value: string; label: string };
 type SummaryPayload = {
@@ -321,10 +323,6 @@ const DEFAULT_STUDENT_MILESTONES: MilestoneWarning[] = [
 ];
 const DASHBOARD_TABS: IndustryTab[] = [
   { value: 'overview', label: 'Overview' },
-  { value: 'instructors', label: 'Instructors' },
-  { value: 'students', label: 'Students' },
-  { value: 'safety', label: 'Safety' },
-  { value: 'quality', label: 'Quality' },
 ];
 
 const EMPTY_NOTE = 'This section is intentionally empty for now. We will add content in the next build stage.';
@@ -880,10 +878,11 @@ const buildTrendBuckets = (period: FleetPeriod) => {
 export default function DashboardPage() {
   const { isLoading: isAccessLoading, isAllowed } = useTenantRouteAccess({ href: '/dashboard' });
   const { tenantId } = useUserProfile();
+  const { tenant: tenantConfig } = useTenantConfig();
   const { uiMode } = useTheme();
   const { scopedOrganizationId } = useOrganizationScope({ viewAllPermissionId: 'quality-audits-view-all' });
   const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState('fleet');
+  const [activeTab, setActiveTab] = useState('overview');
   const [summary, setSummary] = useState<SummaryPayload>({});
   const [quickSafetyReports, setQuickSafetyReports] = useState<QuickSafetyReport[]>([]);
   const [fleetTargetHours, setFleetTargetHours] = useState(DEFAULT_FLEET_TARGET_HOURS);
@@ -894,11 +893,26 @@ export default function DashboardPage() {
   const [isTargetLoading, setIsTargetLoading] = useState(true);
 
   const isModern = uiMode === 'modern';
-  const tabs = DASHBOARD_TABS;
+  const dashboardSettings = useMemo(
+    () => normalizeCompanyDashboardSettings((tenantConfig as Record<string, unknown> | null)?.['company-dashboard-settings']),
+    [tenantConfig]
+  );
+  const tabs = useMemo(
+    () => [
+      ...DASHBOARD_TABS,
+      ...COMPANY_DASHBOARD_VIEW_OPTIONS
+        .filter((option) => dashboardSettings.enabledViews.includes(option.value))
+        .map(({ value, label }) => ({ value, label })),
+    ],
+    [dashboardSettings.enabledViews]
+  );
+  const enabledViewsKey = dashboardSettings.enabledViews.join(',');
 
   useEffect(() => {
-    setActiveTab(tabs[0]?.value ?? 'fleet');
-  }, [tabs]);
+    setActiveTab((currentTab) =>
+      tabs.some((tab) => tab.value === currentTab) ? currentTab : dashboardSettings.defaultView
+    );
+  }, [dashboardSettings.defaultView, tabs]);
 
   useEffect(() => {
     let cancelled = false;
@@ -917,10 +931,14 @@ export default function DashboardPage() {
       try {
         const [summaryResponse, quickSafetyResponse] = await Promise.all([
           fetch('/api/dashboard-summary', { cache: 'no-store' }),
-          fetch('/api/quick-safety-reports', { cache: 'no-store' }),
+          dashboardSettings.enabledViews.includes('safety')
+            ? fetch('/api/quick-safety-reports', { cache: 'no-store' })
+            : Promise.resolve(null),
         ]);
         const payload = (await parseJsonResponse<SummaryPayload>(summaryResponse)) ?? {};
-        const quickSafetyPayload = await quickSafetyResponse.json().catch(() => ({ reports: [] }));
+        const quickSafetyPayload = quickSafetyResponse
+          ? await quickSafetyResponse.json().catch(() => ({ reports: [] }))
+          : { reports: [] };
         if (!cancelled) {
           setSummary(payload);
           setQuickSafetyReports(Array.isArray(quickSafetyPayload?.reports) ? quickSafetyPayload.reports : []);
@@ -958,7 +976,7 @@ export default function DashboardPage() {
       window.removeEventListener('safeviate-safety-reports-updated', handleQuickSafetyReportUpdate);
       window.removeEventListener('storage', handleStorage);
     };
-  }, [tenantId]);
+  }, [dashboardSettings.enabledViews, enabledViewsKey, tenantId]);
 
   if (!isAccessLoading && !isAllowed) {
     return <TenantLayoutDisabledState />;
@@ -1604,13 +1622,11 @@ export default function DashboardPage() {
 
   const activeTabLabel = tabs.find((tab) => tab.value === activeTab)?.label || tabs[0]?.label || 'Overview';
   const activeDashboardPeriod =
-    activeTab === 'overview'
+    activeTab === 'flight-operations'
       ? fleetPeriod
-      : activeTab === 'instructors'
+      : activeTab === 'training'
         ? instructorPeriod
-        : activeTab === 'students'
-          ? studentPeriod
-          : null;
+        : null;
   const activeDashboardPeriodLabel =
     activeDashboardPeriod === 'week' ? '7 Days' : activeDashboardPeriod === 'month' ? '30 Days' : activeDashboardPeriod === 'all' ? 'All Time' : null;
   const activeDashboardPeriodLongLabel =
@@ -1760,9 +1776,11 @@ export default function DashboardPage() {
                           <DropdownMenuItem
                             key={period}
                             onClick={() => {
-                              if (activeTab === 'overview') setFleetPeriod(period);
-                              if (activeTab === 'instructors') setInstructorPeriod(period);
-                              if (activeTab === 'students') setStudentPeriod(period);
+                              if (activeTab === 'flight-operations') setFleetPeriod(period);
+                              if (activeTab === 'training') {
+                                setInstructorPeriod(period);
+                                setStudentPeriod(period);
+                              }
                             }}
                             className="text-[10px] font-bold uppercase"
                           >
@@ -1791,9 +1809,11 @@ export default function DashboardPage() {
                           key={period}
                           type="button"
                           onClick={() => {
-                            if (activeTab === 'overview') setFleetPeriod(period);
-                            if (activeTab === 'instructors') setInstructorPeriod(period);
-                            if (activeTab === 'students') setStudentPeriod(period);
+                            if (activeTab === 'flight-operations') setFleetPeriod(period);
+                            if (activeTab === 'training') {
+                              setInstructorPeriod(period);
+                              setStudentPeriod(period);
+                            }
                           }}
                           className={cn(
                             HEADER_COMPACT_CONTROL_CLASS,
@@ -1812,7 +1832,31 @@ export default function DashboardPage() {
             <ScrollArea className="h-full flex-1">
               <div className="p-5 pb-10 md:p-6 md:pb-10">
                 <>
-                    <TabsContent value="overview" className="m-0 space-y-5">
+                    <TabsContent value="overview" className="m-0">
+                      <Card className={cn(DASHBOARD_SHELL_CLASS, isModern && 'border-slate-200/80 bg-white/95')}>
+                        <CardHeader className={cn(CARD_COMPACT_HEADER_BAND_CLASS, 'border-b')}>
+                          <CardTitle className="text-sm font-black uppercase tracking-tight">Company Overview</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid gap-3 p-4 sm:grid-cols-2">
+                          {COMPANY_DASHBOARD_VIEW_OPTIONS.filter((option) => dashboardSettings.enabledViews.includes(option.value)).map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setActiveTab(option.value)}
+                              className="rounded-lg border border-card-border bg-card p-4 text-left transition-colors hover:bg-muted/50"
+                            >
+                              <p className="text-sm font-black uppercase tracking-tight">{option.label}</p>
+                              <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+                            </button>
+                          ))}
+                          {dashboardSettings.enabledViews.length === 1 ? (
+                            <p className="text-sm text-muted-foreground">No operational dashboard modules are enabled for this tenant.</p>
+                          ) : null}
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    <TabsContent value="flight-operations" className="m-0 space-y-5">
                       <div className="dashboard-card-band flex items-center justify-between gap-3 rounded-md border border-dashed border-card-border/70 px-4 py-2.5">
                         <div className="min-w-0">
                           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-foreground/75">Operations Board</p>
@@ -2257,19 +2301,18 @@ export default function DashboardPage() {
 
                     </TabsContent>
 
-                    {tabs.filter((tab) => tab.value !== 'overview').map((tab) => (
+                    {tabs.filter((tab) => !['overview', 'flight-operations'].includes(tab.value)).map((tab) => (
                       <TabsContent key={tab.value} value={tab.value} className="m-0">
-                        {tab.value === 'instructors' ? (
-                          <InstructorOverviewCard modern={isModern} metrics={instructorMetrics} />
-                        ) : tab.value === 'students' ? (
-                          <StudentOverviewCard modern={isModern} metrics={studentMetrics} summary={summary} />
+                        {tab.value === 'training' ? (
+                          <div className="space-y-5">
+                            <InstructorOverviewCard modern={isModern} metrics={instructorMetrics} />
+                            <StudentOverviewCard modern={isModern} metrics={studentMetrics} summary={summary} />
+                          </div>
                         ) : tab.value === 'safety' ? (
                           <SafetyOverviewCard modern={isModern} summary={summary} />
                         ) : tab.value === 'quality' ? (
                           <QualityOverviewCard modern={isModern} summary={summary} organizationScopeId={scopedOrganizationId} />
-                        ) : (
-                          <InstructorLoadCard modern={isModern} metrics={instructorMetrics} />
-                        )}
+                        ) : null}
                       </TabsContent>
                     ))}
                   </>

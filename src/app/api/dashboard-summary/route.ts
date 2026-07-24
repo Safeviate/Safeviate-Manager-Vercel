@@ -15,6 +15,7 @@ import {
 import { getOrSetRouteCache } from '@/lib/server/route-cache';
 import { recordSimulationRouteMetric } from '@/lib/server/simulation-telemetry';
 import { getTenantIdFromSession } from '@/lib/server/session-tenant';
+import { getCompanyDashboardDataRequirements } from '@/lib/company-dashboard';
 import { NextResponse } from 'next/server';
 
 const PLACEHOLDER_CAP_ACTION_DESCRIPTION = 'Primary corrective action responsibility';
@@ -141,6 +142,9 @@ type SummaryPersonRecord = {
   isErpAlerfaContact: boolean | null;
 };
 
+type SummaryDataRecord = { data: unknown };
+type SummaryCapRecord = { id: string; data: unknown; createdAt: Date; updatedAt: Date };
+
 const projectBookingSummary = (value: unknown): SummaryBookingRecord => {
   const booking = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
   const preFlightData =
@@ -242,19 +246,24 @@ export async function GET(request: Request) {
     const resolvedTenantId = tenantId;
 
     const tenantConfig = await readTenantConfig(resolvedTenantId);
+    const requirements = getCompanyDashboardDataRequirements(tenantConfig['company-dashboard-settings']);
+    const requirementsKey = Object.entries(requirements)
+      .filter(([, enabled]) => enabled)
+      .map(([name]) => name)
+      .join(',');
 
     await Promise.all([
-      ensureAttendanceRecordsSchema(),
-      ensureAircraftSchema(),
-      ensureBookingsSchema(),
-      ensureManagementOfChangeSchema(),
+      requirements.attendance ? ensureAttendanceRecordsSchema() : Promise.resolve(),
+      requirements.aircrafts ? ensureAircraftSchema() : Promise.resolve(),
+      requirements.bookings ? ensureBookingsSchema() : Promise.resolve(),
+      requirements.managementOfChange ? ensureManagementOfChangeSchema() : Promise.resolve(),
       ensureMeetingsSchema(),
-      ensurePersonnelSchema(),
-      ensureQualityAuditsSchema(),
-      ensureTechnicalReportsSchema(),
-      ensureCorrectiveActionPlansSchema(),
-      ensureRisksSchema(),
-      ensureSafetyReportsSchema(),
+      requirements.personnel ? ensurePersonnelSchema() : Promise.resolve(),
+      requirements.qualityAudits ? ensureQualityAuditsSchema() : Promise.resolve(),
+      requirements.technicalReports ? ensureTechnicalReportsSchema() : Promise.resolve(),
+      requirements.correctiveActionPlans ? ensureCorrectiveActionPlansSchema() : Promise.resolve(),
+      requirements.risks ? ensureRisksSchema() : Promise.resolve(),
+      requirements.safetyReports ? ensureSafetyReportsSchema() : Promise.resolve(),
     ]);
     const [
       bookingRows,
@@ -268,10 +277,15 @@ export async function GET(request: Request) {
       attendanceRows,
       meetingRows,
       technicalReportRows,
-    ] = await getOrSetRouteCache(`dashboard-summary:v2:${resolvedTenantId}`, 30_000, async () => Promise.all([
-      safeFindMany('bookings', prisma.bookingRecord.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
-      safeFindMany('aircrafts', prisma.aircraftRecord.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
-      safeFindMany(
+    ] = await getOrSetRouteCache(`dashboard-summary:v3:${resolvedTenantId}:${requirementsKey}`, 30_000, async () => Promise.all([
+      requirements.bookings
+        ? safeFindMany('bookings', prisma.bookingRecord.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } }))
+        : Promise.resolve([] as SummaryDataRecord[]),
+      requirements.aircrafts
+        ? safeFindMany('aircrafts', prisma.aircraftRecord.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } }))
+        : Promise.resolve([] as SummaryDataRecord[]),
+      requirements.personnel
+        ? safeFindMany(
         'personnel',
         prisma.$queryRawUnsafe<SummaryPersonRecord[]>(
           `SELECT
@@ -300,19 +314,32 @@ export async function GET(request: Request) {
            WHERE tenant_id = $1`,
           resolvedTenantId
         )
-      ),
-      safeFindMany('management_of_change', prisma.managementOfChange.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
-      safeFindMany('quality_audits', prisma.qualityAudit.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
-      safeFindMany('safety_reports', prisma.safetyReport.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
-      safeFindMany('corrective_action_plans', prisma.correctiveActionPlan.findMany({ where: { tenantId: resolvedTenantId }, orderBy: { createdAt: 'desc' } })),
-      safeFindMany('risks', prisma.risk.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
-      safeFindMany(
+      )
+        : Promise.resolve([] as SummaryPersonRecord[]),
+      requirements.managementOfChange
+        ? safeFindMany('management_of_change', prisma.managementOfChange.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } }))
+        : Promise.resolve([] as SummaryDataRecord[]),
+      requirements.qualityAudits
+        ? safeFindMany('quality_audits', prisma.qualityAudit.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } }))
+        : Promise.resolve([] as SummaryDataRecord[]),
+      requirements.safetyReports
+        ? safeFindMany('safety_reports', prisma.safetyReport.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } }))
+        : Promise.resolve([] as SummaryDataRecord[]),
+      requirements.correctiveActionPlans
+        ? safeFindMany('corrective_action_plans', prisma.correctiveActionPlan.findMany({ where: { tenantId: resolvedTenantId }, orderBy: { createdAt: 'desc' } }))
+        : Promise.resolve([] as SummaryCapRecord[]),
+      requirements.risks
+        ? safeFindMany('risks', prisma.risk.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } }))
+        : Promise.resolve([] as SummaryDataRecord[]),
+      requirements.attendance
+        ? safeFindMany(
         'attendance_records',
         prisma.$queryRawUnsafe<{ data: unknown }[]>(
           `SELECT data FROM attendance_records WHERE tenant_id = $1 ORDER BY created_at DESC`,
           resolvedTenantId
         )
-      ),
+      )
+        : Promise.resolve([] as SummaryDataRecord[]),
       safeFindMany(
         'meetings',
         prisma.$queryRawUnsafe<{ data: unknown }[]>(
@@ -320,13 +347,15 @@ export async function GET(request: Request) {
           resolvedTenantId
         )
       ),
-      safeFindMany(
+      requirements.technicalReports
+        ? safeFindMany(
         'technical_reports',
         prisma.$queryRawUnsafe<{ data: unknown }[]>(
           `SELECT data FROM technical_reports WHERE tenant_id = $1 ORDER BY created_at DESC`,
           resolvedTenantId
         )
-      ),
+      )
+        : Promise.resolve([] as SummaryDataRecord[]),
     ]));
 
     const invalidCapIds = capRows
@@ -350,10 +379,10 @@ export async function GET(request: Request) {
     const instructorList: Array<{ id: string; firstName?: string; lastName?: string; userType?: string; canBeInstructor?: boolean | null; canBeStudent?: boolean | null; canBePIC?: boolean | null }> = [];
     const studentList: Array<{ id: string; firstName?: string; lastName?: string; userType?: string; canBeInstructor?: boolean | null; canBeStudent?: boolean | null; canBePIC?: boolean | null }> = [];
     const privatePilotList: Array<{ id: string; firstName?: string; lastName?: string; userType?: string; canBeInstructor?: boolean | null; canBeStudent?: boolean | null; canBePIC?: boolean | null }> = [];
-    const studentTrainingReports = Array.isArray(tenantConfig['student-progress-reports'])
+    const studentTrainingReports = requirements.personnel && Array.isArray(tenantConfig['student-progress-reports'])
       ? (tenantConfig['student-progress-reports'] as unknown[])
       : [];
-    const studentMilestones = tenantConfig['student-milestones'] ?? null;
+    const studentMilestones = requirements.personnel ? tenantConfig['student-milestones'] ?? null : null;
     const attendanceRecords = attendanceRows.map((row) => row.data as {
       id: string;
       status?: 'clocked_in' | 'clocked_out';
