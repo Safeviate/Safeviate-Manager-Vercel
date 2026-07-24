@@ -110,17 +110,40 @@ function renderTechnicalText(value?: string | null, indentation?: number[]) {
     return `${3.5 + (level - 3) * 1.5}rem`;
   };
 
+  const splitClauseMarker = (line: string) => {
+    const match = line.trim().match(/^(\((?:\d+|[a-z]{1,3}|i{1,3}|iv|v|vi{0,3}|ix|x|xi{0,3}|xiv|xv|xvi{0,3}|xix|xx)\))\s+(.+)$/i);
+    return match ? { marker: match[1], text: match[2] } : null;
+  };
+
   return (
     <div className="space-y-2 px-1 py-1">
-      {lines.map((line, index) => (
-        <p
-          key={`${index}-${line.slice(0, 24)}`}
-          className="whitespace-pre-wrap break-words text-sm leading-6 text-foreground"
-          style={{ marginLeft: indentationOffset(canonicalIndentation(line, normalizedIndentation[index] || 0)) }}
-        >
-          {line}
-        </p>
-      ))}
+      {lines.map((line, index) => {
+        const clause = splitClauseMarker(line);
+        const indentation = indentationOffset(canonicalIndentation(line, normalizedIndentation[index] || 0));
+
+        if (!clause) {
+          return (
+            <p
+              key={`${index}-${line.slice(0, 24)}`}
+              className="whitespace-pre-wrap break-words text-justify text-sm leading-6 text-foreground"
+              style={{ marginLeft: indentation }}
+            >
+              {line}
+            </p>
+          );
+        }
+
+        return (
+          <div
+            key={`${index}-${line.slice(0, 24)}`}
+            className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-1 text-sm leading-6 text-foreground"
+            style={{ marginLeft: indentation }}
+          >
+            <span>{clause.marker}</span>
+            <span className="min-w-0 break-words text-justify">{clause.text}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
