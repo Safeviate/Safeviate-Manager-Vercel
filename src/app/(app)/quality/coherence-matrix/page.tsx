@@ -1333,10 +1333,10 @@ export default function CoherenceMatrixPage() {
               />
             }
           />
-          <CardContent className="flex-1 min-h-0 overflow-auto p-6 pt-4">
-            <div className="grid gap-4 lg:grid-cols-[minmax(360px,0.95fr)_minmax(0,1.25fr)]">
-              <Card className="border border-card-border shadow-none">
-                <CardContent className="p-4">
+          <CardContent className={cn('flex-1 min-h-0 p-6 pt-4', isMobile ? 'overflow-auto' : 'overflow-hidden')}>
+            <div className={cn('grid gap-4 lg:grid-cols-[minmax(360px,0.95fr)_minmax(0,1.25fr)]', !isMobile && 'h-full min-h-0')}>
+              <Card className={cn('border border-card-border shadow-none', !isMobile && 'flex min-h-0 flex-col overflow-hidden')}>
+                <CardContent className={cn('p-4', !isMobile && 'min-h-0 flex-1 overflow-y-auto')}>
                   <div className="mb-3">
                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-foreground/50">Regulation Browser</p>
                       <p className="mt-1 text-sm text-foreground/70">Select a Part, Subheader, or Regulation on the left. Choosing a regulation reveals the full regulation text on the right.</p>
@@ -1355,8 +1355,8 @@ export default function CoherenceMatrixPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border border-card-border shadow-none">
-                <CardContent className="p-4">
+              <Card className={cn('border border-card-border shadow-none', !isMobile && 'flex min-h-0 flex-col overflow-hidden')}>
+                <CardContent className={cn('p-4', !isMobile && 'min-h-0 flex-1 overflow-y-auto')}>
                   {activeRegulationItem ? (
                     <div className="space-y-4">
                       <div className="rounded-lg bg-card/20 p-4">
