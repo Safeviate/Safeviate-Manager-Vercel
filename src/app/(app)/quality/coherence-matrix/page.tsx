@@ -1070,14 +1070,22 @@ export default function CoherenceMatrixPage() {
                   {depth === 0 ? (
                     <>
                       <p className="text-[11px] font-black tracking-wide text-foreground/65">{item.regulationCode}</p>
-                      <p className="break-words text-sm font-semibold leading-5 text-foreground">{item.regulationStatement}</p>
+                      {getRegulationStatementLabel(item) ? (
+                        <p className="break-words text-sm font-semibold leading-5 text-foreground">
+                          {getRegulationStatementLabel(item)}
+                        </p>
+                      ) : null}
                     </>
                   ) : (
                     <>
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-primary/75">SUBPART</p>
                       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                         <span className="text-[11px] font-black tracking-wide text-primary/85">{item.regulationCode}</span>
-                        <span className="text-sm font-semibold leading-5 text-foreground">{item.regulationStatement}</span>
+                        {getRegulationStatementLabel(item) ? (
+                          <span className="text-sm font-semibold leading-5 text-foreground">
+                            {getRegulationStatementLabel(item)}
+                          </span>
+                        ) : null}
                       </div>
                     </>
                   )}
