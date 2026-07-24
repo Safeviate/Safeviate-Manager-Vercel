@@ -16,6 +16,7 @@ import { CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { getPersonnelDisplayName } from '@/lib/personnel-label';
+import { getCanonicalClauseIndentation, getClauseGridTemplateColumns, getClauseIndentationOffset, splitClauseMarker } from '@/lib/regulation-clause-layout';
 import type { Personnel } from '../../users/personnel/page';
 import type { ComplianceRequirement } from '@/types/quality';
 
@@ -76,15 +77,7 @@ function normalizeLineIndentation(lines: string[], indentation: number[] = []) {
     return lines.map((line, index) => {
         const value = indentation[index];
         const normalizedValue = Number.isFinite(value) && value >= 0 ? Math.min(Math.floor(value), 6) : 0;
-        const trimmedLine = line.trim();
-
-        // Keep top-level numbered clauses aligned with the regulation body.
-        if (/^\(\d+\)\s*/.test(trimmedLine)) return 0;
-        if (/^\((?:i|ii|iii|iv|v|vi|vii|viii|ix|x|xi|xii|xiii|xiv|xv|xvi|xvii|xviii|xix|xx)\)\s*/i.test(trimmedLine)) {
-            return Math.max(2, normalizedValue);
-        }
-        if (/^\([a-z]{1,3}\)\s*/i.test(trimmedLine)) return Math.max(1, normalizedValue);
-        return normalizedValue;
+        return getCanonicalClauseIndentation(line, normalizedValue);
     });
 }
 
@@ -432,7 +425,8 @@ export function ComplianceItemForm({
                             {technicalStandardLines.length > 0 ? (
                                 <div className="space-y-2">
                                     {technicalStandardLines.map((line, index) => {
-                                        const indentLevel = technicalStandardIndentation[index] ?? 0;
+                                        const indentLevel = getCanonicalClauseIndentation(line, technicalStandardIndentation[index] ?? 0);
+                                        const clause = splitClauseMarker(line);
                                         const label = line.trim() || 'Blank line';
                                         return (
                                             <div key={`${index}-${line.slice(0, 24)}`} className="flex items-start gap-2 rounded-md border border-card-border/70 bg-background px-2 py-2">
@@ -471,12 +465,25 @@ export function ComplianceItemForm({
                                                     </Button>
                                                 </div>
                                                 <div className="min-w-0 flex-1">
-                                                    <p
-                                                        className="whitespace-pre-wrap break-words text-sm leading-6 text-foreground/80"
-                                                        style={{ marginLeft: `${indentLevel * 1.5}rem` }}
-                                                    >
-                                                        {label}
-                                                    </p>
+                                                    {clause ? (
+                                                        <div
+                                                            className="grid gap-x-1 text-sm leading-6 text-foreground/80"
+                                                            style={{
+                                                                marginLeft: getClauseIndentationOffset(indentLevel),
+                                                                gridTemplateColumns: getClauseGridTemplateColumns(line, indentLevel),
+                                                            }}
+                                                        >
+                                                            <span>{clause.marker}</span>
+                                                            <span className="min-w-0 break-words text-justify">{clause.text}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <p
+                                                            className="whitespace-pre-wrap break-words text-sm leading-6 text-foreground/80"
+                                                            style={{ marginLeft: getClauseIndentationOffset(indentLevel) }}
+                                                        >
+                                                            {label}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
                                         );

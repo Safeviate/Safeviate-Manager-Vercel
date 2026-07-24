@@ -33,6 +33,7 @@ import type { SummarizeDocumentInput, SummarizeDocumentOutput } from '@/ai/flows
 import { callAiFlow } from '@/lib/ai-client';
 import { extractClipboardText } from '@/lib/clipboard';
 import { getPersonnelDisplayName } from '@/lib/personnel-label';
+import { getCanonicalClauseIndentation, getClauseGridTemplateColumns, getClauseIndentationOffset, splitClauseMarker } from '@/lib/regulation-clause-layout';
 import { cn } from '@/lib/utils';
 import { normalizeIndentationArray, normalizeRegulationClipboardText, normalizeRegulationCode, sanitizeComplianceMatrixEntry } from '@/lib/regulation-code';
 
@@ -85,43 +86,16 @@ function renderTechnicalText(value?: string | null, indentation?: number[]) {
     .map((line) => line.trimEnd())
     .filter((line) => line.trim().length > 0);
   const normalizedIndentation = normalizeIndentationArray(indentation);
-  const canonicalIndentation = (line: string, level: number) => {
-    const trimmedLine = line.trim();
-
-    // Numbered clauses are the regulation's base level, regardless of older saved data.
-    if (/^\(\d+\)\s*/.test(trimmedLine)) return 0;
-    if (/^\((?:i|ii|iii|iv|v|vi|vii|viii|ix|x|xi|xii|xiii|xiv|xv|xvi|xvii|xviii|xix|xx)\)\s*/i.test(trimmedLine)) {
-      return Math.max(2, level);
-    }
-    if (/^\([a-z]{1,3}\)\s*/i.test(trimmedLine)) return Math.max(1, level);
-    return level;
-  };
-
   if (lines.length === 0) {
     return null;
   }
-
-  const indentationOffset = (level: number) => {
-    // Regulation numbering starts close to the text edge; nested clauses step in more noticeably.
-    if (level <= 0) return '0';
-    if (level === 1) return '0.75rem';
-    if (level === 2) return '2rem';
-    if (level === 3) return '3.5rem';
-    return `${3.5 + (level - 3) * 1.5}rem`;
-  };
-
-  const splitClauseMarker = (line: string) => {
-    const match = line.trim().match(/^(\((?:\d+|[a-z]{1,3}|i{1,3}|iv|v|vi{0,3}|ix|x|xi{0,3}|xiv|xv|xvi{0,3}|xix|xx)\))\s+(.+)$/i);
-    return match ? { marker: match[1], text: match[2] } : null;
-  };
 
   return (
     <div className="space-y-2 px-1 py-1">
       {lines.map((line, index) => {
         const clause = splitClauseMarker(line);
-        const indentationLevel = canonicalIndentation(line, normalizedIndentation[index] || 0);
-        const indentation = indentationOffset(indentationLevel);
-        const isLowercaseClause = /^\([a-z]{1,3}\)\s*/i.test(line.trim());
+        const indentationLevel = getCanonicalClauseIndentation(line, normalizedIndentation[index] || 0);
+        const indentation = getClauseIndentationOffset(indentationLevel);
 
         if (!clause) {
           return (
@@ -141,10 +115,7 @@ function renderTechnicalText(value?: string | null, indentation?: number[]) {
             className="grid gap-x-1 text-sm leading-6 text-foreground"
             style={{
               marginLeft: indentation,
-              // Keep nested letter markers indented, while their wording aligns with the parent text column.
-              gridTemplateColumns: isLowercaseClause && indentationLevel === 1
-                ? 'calc(2rem - 0.75rem) minmax(0, 1fr)'
-                : '2rem minmax(0, 1fr)',
+              gridTemplateColumns: getClauseGridTemplateColumns(line, indentationLevel),
             }}
           >
             <span>{clause.marker}</span>
@@ -1403,9 +1374,6 @@ export default function CoherenceMatrixPage() {
                       <div className="rounded-lg bg-card/20 p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
-                            {activeRegulationItem.documentHeading?.trim() ? (
-                              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-foreground/55">{activeRegulationItem.documentHeading}</p>
-                            ) : null}
                             <p className="mt-1 text-[11px] font-black tracking-wide text-primary/85">{activeRegulationItem.regulationCode}</p>
                             {getRegulationStatementLabel(activeRegulationItem) ? (
                               <h4 className="mt-1 break-words text-base font-semibold leading-6 text-foreground">{getRegulationStatementLabel(activeRegulationItem)}</h4>
