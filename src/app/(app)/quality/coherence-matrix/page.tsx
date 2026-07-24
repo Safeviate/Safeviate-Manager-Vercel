@@ -60,6 +60,11 @@ function formatParentOptionLabel(option: { code: string; label: string }) {
   return label && label !== code ? `${code} - ${label}` : code;
 }
 
+function formatAiPopulateTargetLabel(option: { code: string; label: string; parentLabel?: string }) {
+  const subheader = formatParentOptionLabel(option);
+  return option.parentLabel ? `${option.parentLabel} / ${subheader}` : subheader;
+}
+
 function getItemFamily(item: ComplianceRequirement): RegulationFamily {
   if (item.regulationFamily === 'sacaa-cats' || item.regulationFamily === 'ohs') {
     return item.regulationFamily;
@@ -320,7 +325,7 @@ function UploadRegulationsDialog({
   tenantId: string;
   organizationId: string | null;
   regulationFamily: RegulationFamily;
-  availableParentHeaders: { code: string; label: string }[];
+  availableParentHeaders: { code: string; label: string; parentLabel?: string }[];
   trigger?: React.ReactNode;
 }) {
   const { toast } = useToast();
@@ -567,15 +572,15 @@ function UploadRegulationsDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="target-header">Target sub-regulation</Label>
+              <Label htmlFor="target-header">Target header and sub-regulation</Label>
               <Select value={targetHeader} onValueChange={setTargetHeader}>
                 <SelectTrigger id="target-header">
-                  <SelectValue placeholder="Select a sub-regulation" />
+                  <SelectValue placeholder="Select a header and sub-regulation" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableParentHeaders.map((header) => (
                     <SelectItem key={header.code} value={header.code}>
-                      {formatParentOptionLabel(header)}
+                      {formatAiPopulateTargetLabel(header)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -897,17 +902,32 @@ export default function CoherenceMatrixPage() {
   );
 
   const availableSubRegulationHeaders = useMemo(
-    () =>
-      activeFamilyItems
+    () => {
+      const headerLabels = new Map(
+        activeFamilyItems
+          .filter((item) => !item.technicalStandard?.trim())
+          .filter((item) => !normalizeRegulationCode(item.parentRegulationCode))
+          .map((item) => [
+            normalizeRegulationCode(item.regulationCode),
+            formatParentOptionLabel({ code: item.regulationCode, label: item.regulationStatement || item.regulationCode }),
+          ]),
+      );
+
+      return activeFamilyItems
         .filter((item) => !item.technicalStandard?.trim())
         .filter((item) => !!normalizeRegulationCode(item.parentRegulationCode))
         .sort((a, b) => naturalSort(a.regulationCode, b.regulationCode))
         .reduce((acc, item) => {
           const code = normalizeRegulationCode(item.regulationCode);
           if (!code || acc.some((entry) => entry.code === code)) return acc;
-          acc.push({ code, label: (item.regulationStatement || item.regulationCode).trim() });
+          acc.push({
+            code,
+            label: (item.regulationStatement || item.regulationCode).trim(),
+            parentLabel: headerLabels.get(normalizeRegulationCode(item.parentRegulationCode)),
+          });
           return acc;
-        }, [] as { code: string; label: string }[]),
+        }, [] as { code: string; label: string; parentLabel?: string }[]);
+    },
     [activeFamilyItems],
   );
 
