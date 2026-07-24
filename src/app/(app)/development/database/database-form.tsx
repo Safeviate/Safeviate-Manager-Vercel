@@ -24,6 +24,13 @@ import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
 import type { IndustryType, Tenant, PageLayoutSettings } from '@/types/quality';
 import { buildDefaultPageLayoutSettings } from '@/lib/tenant-setup-presets';
 import { PAGE_FORMAT_PRIMARY_BUTTON_CLASS } from '@/lib/page-format-buttons';
+import {
+  COMPANY_DASHBOARD_VIEW_OPTIONS,
+  DEFAULT_COMPANY_DASHBOARD_SETTINGS,
+  normalizeCompanyDashboardSettings,
+  type CompanyDashboardSettings,
+  type ConfigurableCompanyDashboardView,
+} from '@/lib/company-dashboard';
 
 const TENANT_PAGE_BUTTON_CLASS = PAGE_FORMAT_PRIMARY_BUTTON_CLASS;
 const TENANT_OVERRIDE_STORAGE_KEY = 'safeviate:selected-tenant';
@@ -54,6 +61,7 @@ type TenantConfigPayload = {
   pageLayoutSettings?: PageLayoutSettings | null;
   tabVisibilitySettings?: { id: string; visibilities: Record<string, boolean> } | null;
   defaultRoleTemplate?: 'standard' | 'none';
+  'company-dashboard-settings'?: CompanyDashboardSettings | null;
 };
 
 type TenantSummary = Tenant;
@@ -99,6 +107,12 @@ const getTenantPageLayoutSettings = (config: TenantConfigPayload | null) =>
     ? config.pageLayoutSettings
     : buildDefaultPageLayoutSettings();
 
+const buildNewTenantDashboardSettings = (): CompanyDashboardSettings => ({
+  ...DEFAULT_COMPANY_DASHBOARD_SETTINGS,
+  enabledViews: ['overview'],
+  defaultView: 'overview',
+});
+
 const buildTenantIdFromName = (value: string) =>
   value
     .trim()
@@ -125,6 +139,7 @@ export function DatabaseForm({
   const [logoPreview, setLogoPreview] = useState('');
   const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(() => buildDefaultEnabledHrefs());
   const [pageLayoutSettings, setPageLayoutSettings] = useState<PageLayoutSettings>(() => buildDefaultPageLayoutSettings());
+  const [dashboardSettings, setDashboardSettings] = useState<CompanyDashboardSettings>(buildNewTenantDashboardSettings);
   const [defaultRoleTemplate, setDefaultRoleTemplate] = useState<'standard' | 'none'>('standard');
   const [menuFilter, setMenuFilter] = useState('');
   const isEditingExistingTenant = Boolean(selectedTenantId);
@@ -203,10 +218,12 @@ export function DatabaseForm({
       const nextEnabledHrefs = getTenantMenuState(tenant, config);
       setEnabledHrefs(nextEnabledHrefs.size > 0 ? nextEnabledHrefs : getDefaultTenantMenuState());
       setPageLayoutSettings(getTenantPageLayoutSettings(config));
+      setDashboardSettings(normalizeCompanyDashboardSettings(config?.['company-dashboard-settings']));
       setDefaultRoleTemplate(config?.defaultRoleTemplate === 'none' ? 'none' : 'standard');
     } catch {
       setEnabledHrefs(getDefaultTenantMenuState());
       setPageLayoutSettings(buildDefaultPageLayoutSettings());
+      setDashboardSettings(buildNewTenantDashboardSettings());
       setDefaultRoleTemplate('standard');
     }
 
@@ -241,6 +258,7 @@ export function DatabaseForm({
     setLogoPreview('');
     setEnabledHrefs(getDefaultTenantMenuState());
     setPageLayoutSettings(buildDefaultPageLayoutSettings());
+    setDashboardSettings(buildNewTenantDashboardSettings());
     setDefaultRoleTemplate('standard');
     setMenuFilter('');
   };
@@ -306,6 +324,18 @@ export function DatabaseForm({
     return selectedChildren > 0 && selectedChildren < subHrefs.length;
   };
 
+  const toggleDashboardView = (view: ConfigurableCompanyDashboardView, checked: boolean) => {
+    setDashboardSettings((current) =>
+      normalizeCompanyDashboardSettings({
+        ...current,
+        enabledViews: checked
+          ? [...current.enabledViews, view]
+          : current.enabledViews.filter((enabledView) => enabledView !== view),
+        defaultView: !checked && current.defaultView === view ? 'overview' : current.defaultView,
+      })
+    );
+  };
+
   const handleLogoUpload = async (file: File | undefined) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
@@ -354,6 +384,15 @@ export function DatabaseForm({
       return;
     }
 
+    if (isNewTenant && dashboardSettings.enabledViews.length === 1) {
+      toast({
+        variant: 'destructive',
+        title: 'Select Dashboard Modules',
+        description: 'Select at least one Company Dashboard module for the new tenant.',
+      });
+      return;
+    }
+
     const effectiveEnabledHrefs = Array.from(enabledHrefs);
     const tenantData: Tenant = {
       id: tenantId,
@@ -394,6 +433,7 @@ export function DatabaseForm({
             pageLayoutSettings,
             tabVisibilitySettings: tenantData.tabVisibilitySettings,
             defaultRoleTemplate,
+            'company-dashboard-settings': dashboardSettings,
           },
         }),
       });
@@ -634,6 +674,53 @@ export function DatabaseForm({
                             Standard creates tenant-local Administrator and Viewer roles using the current CRUD permission model.
                           </p>
                         </div>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border bg-background shadow-none">
+                    <CardHeader className="border-b bg-muted/10 px-4 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-primary">Company Dashboard</p>
+                      <CardTitle className="text-base font-black uppercase tracking-tight">Dashboard Modules</CardTitle>
+                      <CardDescription className="text-xs text-muted-foreground">
+                        Overview is always available. Select the modules this tenant needs before creating it.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2 p-4">
+                      <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-foreground">Overview</p>
+                          <p className="text-xs text-muted-foreground">Always enabled</p>
+                        </div>
+                        <Badge variant="outline" className="border-primary/20 bg-background text-[9px] font-black uppercase tracking-widest text-primary">
+                          Required
+                        </Badge>
+                      </div>
+                      {COMPANY_DASHBOARD_VIEW_OPTIONS.map((option) => {
+                        const isEnabled = dashboardSettings.enabledViews.includes(option.value);
+                        return (
+                          <label
+                            key={option.value}
+                            className={cn(
+                              'flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition-colors',
+                              isEnabled ? 'border-primary/30 bg-primary/5' : 'border-border bg-background hover:bg-muted/40'
+                            )}
+                          >
+                            <Checkbox
+                              checked={isEnabled}
+                              onCheckedChange={(checked) => toggleDashboardView(option.value, checked === true)}
+                              className="mt-0.5 h-4 w-4 border-2 data-[state=checked]:bg-primary"
+                              aria-label={`Enable ${option.label} on the Company Dashboard`}
+                            />
+                            <span className="space-y-0.5">
+                              <span className="block text-[10px] font-black uppercase tracking-widest text-foreground">{option.label}</span>
+                              <span className="block text-xs leading-4 text-muted-foreground">{option.description}</span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                      {isCreatingNewTenant && dashboardSettings.enabledViews.length === 1 ? (
+                        <p className="text-xs font-medium text-amber-700">Select at least one module to create this tenant.</p>
                       ) : null}
                     </CardContent>
                   </Card>

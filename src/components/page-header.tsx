@@ -8,7 +8,7 @@ export const HEADER_ACTION_BUTTON_CLASS =
   "h-7 rounded-md px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]";
 
 export const HEADER_SECONDARY_BUTTON_CLASS =
-  "h-7 rounded-md border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-[0.08em] text-slate-800 shadow-sm transition-transform hover:scale-[1.02] hover:bg-slate-50 active:scale-[0.98]";
+  "h-7 rounded-md border-button-secondary-border bg-button-secondary px-3 text-[9px] font-black uppercase tracking-[0.08em] text-button-secondary-foreground shadow-sm transition-transform hover:scale-[1.02] hover:bg-button-secondary-accent hover:text-button-secondary-accent-foreground active:scale-[0.98]";
 
 export const HEADER_MOBILE_ACTION_BUTTON_CLASS =
   `${HEADER_ACTION_BUTTON_CLASS} ${PAGE_FORMAT_MOBILE_BUTTON_CLASS}`;
@@ -21,6 +21,12 @@ export const HEADER_TAB_TRIGGER_CLASS =
 
 export const HEADER_COMPACT_CONTROL_CLASS =
   "h-7 rounded-md border border-input bg-background px-3 py-1 text-[9px] font-black uppercase tracking-[0.08em] shadow-none gap-1.5 shrink-0";
+
+export const HEADER_VIEW_SWITCHER_CLASS =
+  "h-7 rounded-md border-button-secondary-border bg-button-secondary px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.08em] text-button-secondary-foreground shadow-none transition-colors hover:bg-button-secondary-accent hover:text-button-secondary-accent-foreground";
+
+export const HEADER_VIEW_SWITCHER_ACTIVE_CLASS =
+  "border-button-primary-border bg-button-primary text-button-primary-foreground hover:bg-button-primary-accent hover:text-button-primary-accent-foreground";
 
 export const CARD_HEADER_BAND_CLASS =
   "min-h-[38px] shrink-0 border-b border-card-border bg-[hsl(var(--card-header-band-background))] px-2 py-1 text-[hsl(var(--card-header-band-foreground))] md:px-3";

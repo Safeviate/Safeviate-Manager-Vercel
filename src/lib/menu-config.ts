@@ -364,6 +364,12 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'admin-settings-edit',
       },
       {
+        href: '/admin/features',
+        label: 'Features',
+        description: 'Configure tenant features, dashboard modules, and finding levels.',
+        permissionId: 'admin-settings-edit',
+      },
+      {
         href: '/admin/accounting',
         label: 'Accounting & Billing',
         description: 'Review and export completed flights to Sage.',

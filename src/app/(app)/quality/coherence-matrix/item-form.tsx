@@ -115,15 +115,13 @@ const itemFormSchema = z.object({
 const headerFormSchema = z.object({
     regulationFamily: z.enum(['sacaa-cars', 'sacaa-cats', 'ohs']),
     regulationCode: z.string().min(1, 'Code is required.'),
-    regulationStatement: z.string().min(1, 'Title is required.'),
     responsibleManagerId: z.string().min(1, 'Responsible person is required.'),
 });
 
 const subheaderFormSchema = z.object({
     regulationFamily: z.enum(['sacaa-cars', 'sacaa-cats', 'ohs']),
     parentRegulationCode: z.string().min(1, 'Parent header is required.'),
-    regulationCode: z.string().min(1, 'Code is required.'),
-    regulationStatement: z.string().min(1, 'Title is required.'),
+    regulationCode: z.string().min(1, 'Title is required.'),
     responsibleManagerId: z.string().min(1, 'Responsible person is required.'),
 }).superRefine((values, ctx) => {
     const parentCode = normalizeRegulationCode(values.parentRegulationCode);
@@ -262,7 +260,8 @@ export function ComplianceItemForm({
                 regulationFamily: values.regulationFamily,
                 parentRegulationCode: '',
                 regulationCode: normalizedCode,
-                regulationStatement: values.regulationStatement.trim(),
+                // A header is now entered once; use that value as its display label.
+                regulationStatement: normalizedCode,
                 technicalStandard: '',
                 companyReference: '',
                 responsibleManagerId: normalizeResponsibleManagerId(values.responsibleManagerId),
@@ -275,7 +274,7 @@ export function ComplianceItemForm({
                 regulationFamily: values.regulationFamily,
                 parentRegulationCode: normalizedParentCode,
                 regulationCode: normalizeRegulationCode(values.regulationCode) || splitInput.regulationCode,
-                regulationStatement: values.regulationStatement.trim() || splitInput.regulationStatement,
+                regulationStatement: normalizeRegulationCode(values.regulationCode) || splitInput.regulationStatement,
                 technicalStandard: '',
                 companyReference: '',
                 responsibleManagerId: normalizeResponsibleManagerId(values.responsibleManagerId),
@@ -323,9 +322,9 @@ export function ComplianceItemForm({
             title: 'Complete Required Fields',
             description:
                 mode === 'header'
-                    ? 'Add the regulation code, regulation title, and responsible person before saving.'
+                    ? 'Add the header and responsible person before saving.'
                     : mode === 'subheader'
-                        ? 'Add the sub-regulation code, select the parent regulation, add the sub-regulation title, and choose the responsible person before saving.'
+                        ? 'Add the subheader title, select the parent header, and choose the responsible person before saving.'
                         : 'Complete the regulation code, parent regulation or sub-regulation, title, company reference, and any other required fields before saving.',
         });
     };
@@ -358,7 +357,7 @@ export function ComplianceItemForm({
                         </div>
                     </div>
                 ) : null}
-                <FormField control={form.control} name="regulationCode" render={({ field }) => ( <FormItem><FormLabel>{mode === 'header' ? 'Header Code' : mode === 'subheader' ? 'Subheader Code' : 'Regulation Number'}</FormLabel><FormControl><Input placeholder={mode === 'header' ? 'e.g., Part 43' : mode === 'subheader' ? 'e.g., SUBPART 1' : 'e.g., 43.01.1'} {...field} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="regulationCode" render={({ field }) => ( <FormItem><FormLabel>{mode === 'header' ? 'Header' : mode === 'subheader' ? 'Subheader Title' : 'Regulation Number'}</FormLabel><FormControl><Input placeholder={mode === 'header' ? 'e.g., Part 43' : mode === 'subheader' ? 'e.g., SUBPART 1' : 'e.g., 43.01.1'} {...field} /></FormControl><FormMessage /></FormItem> )} />
                 {mode === 'item' ? (
                     <>
                         <FormField control={form.control} name="regulationFamily" render={({ field }) => (
@@ -565,15 +564,6 @@ export function ComplianceItemForm({
                                 <FormMessage />
                             </FormItem>
                         )} />
-                        <FormField control={form.control} name="regulationStatement" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Subheader Title</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="e.g., GENERAL" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
                         <FormField control={form.control} name="responsibleManagerId" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Responsible person</FormLabel>
@@ -613,15 +603,6 @@ export function ComplianceItemForm({
                                         <SelectItem value="ohs">OHS</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                        <FormField control={form.control} name="regulationStatement" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Header Title</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="e.g., General Maintenance Rules" {...field} />
-                                </FormControl>
                                 <FormMessage />
                             </FormItem>
                         )} />

@@ -31,6 +31,8 @@ import {
   HEADER_SECONDARY_BUTTON_CLASS,
   HEADER_TAB_LIST_CLASS,
   HEADER_TAB_TRIGGER_CLASS,
+  HEADER_VIEW_SWITCHER_ACTIVE_CLASS,
+  HEADER_VIEW_SWITCHER_CLASS,
 } from '@/components/page-header';
 import { usePageLayout } from '@/hooks/use-page-layout';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -614,8 +616,8 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                     Print report
                   </Button>
                   <span className="h-5 w-px bg-slate-200" aria-hidden="true" />
-                  <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} px-2.5 ${activeTab === 'full' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} style={{ height: 24, minHeight: 24 }} onClick={() => setActiveTab('full')}>Full report</Button>
-                  <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} px-2.5 ${activeTab === 'discussion' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} style={{ height: 24, minHeight: 24 }} onClick={() => setActiveTab('discussion')}>Diary{myMentionsCount > 0 ? ` (${myMentionsCount})` : ''}</Button>
+                  <Button type="button" variant="outline" size="sm" className={`${HEADER_VIEW_SWITCHER_CLASS} ${activeTab === 'full' ? HEADER_VIEW_SWITCHER_ACTIVE_CLASS : ''}`} style={{ height: 24, minHeight: 24 }} onClick={() => setActiveTab('full')}>Full report</Button>
+                  <Button type="button" variant="outline" size="sm" className={`${HEADER_VIEW_SWITCHER_CLASS} ${activeTab === 'discussion' ? HEADER_VIEW_SWITCHER_ACTIVE_CLASS : ''}`} style={{ height: 24, minHeight: 24 }} onClick={() => setActiveTab('discussion')}>Diary{myMentionsCount > 0 ? ` (${myMentionsCount})` : ''}</Button>
                   </div>
                   <div className="sm:hidden">
                     <DropdownMenu>
