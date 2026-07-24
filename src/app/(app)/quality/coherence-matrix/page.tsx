@@ -220,6 +220,34 @@ function isStructuralBrowserNode(item: ComplianceRequirement) {
   return !item.technicalStandard?.trim() && !item.companyReference?.trim() && !item.nextAuditDate?.trim();
 }
 
+type AiPopulateTarget = { code: string; label: string; parentLabel?: string };
+
+function buildAiPopulateTargets(items: ComplianceRequirement[]): AiPopulateTarget[] {
+  const structuralItems = items.filter(isStructuralBrowserNode);
+  const headerLabels = new Map(
+    structuralItems
+      .filter((item) => !normalizeRegulationCode(item.parentRegulationCode))
+      .map((item) => [
+        normalizeRegulationCode(item.regulationCode),
+        formatParentOptionLabel({ code: item.regulationCode, label: item.regulationStatement || item.regulationCode }),
+      ]),
+  );
+
+  return structuralItems
+    .filter((item) => !!normalizeRegulationCode(item.parentRegulationCode))
+    .sort((a, b) => naturalSort(a.regulationCode, b.regulationCode))
+    .reduce((acc, item) => {
+      const code = normalizeRegulationCode(item.regulationCode);
+      if (!code || acc.some((entry) => entry.code === code)) return acc;
+      acc.push({
+        code,
+        label: (item.regulationStatement || item.regulationCode).trim(),
+        parentLabel: headerLabels.get(normalizeRegulationCode(item.parentRegulationCode)),
+      });
+      return acc;
+    }, [] as AiPopulateTarget[]);
+}
+
 function repairOrphanedSiblingParents(items: ComplianceRequirement[]) {
   const itemsByCode = new Map(
     items
@@ -319,13 +347,13 @@ function UploadRegulationsDialog({
   tenantId,
   organizationId,
   regulationFamily,
-  availableParentHeaders,
+  availableTargetsByFamily,
   trigger,
 }: {
   tenantId: string;
   organizationId: string | null;
   regulationFamily: RegulationFamily;
-  availableParentHeaders: { code: string; label: string; parentLabel?: string }[];
+  availableTargetsByFamily: Record<RegulationFamily, AiPopulateTarget[]>;
   trigger?: React.ReactNode;
 }) {
   const { toast } = useToast();
@@ -578,7 +606,7 @@ function UploadRegulationsDialog({
                   <SelectValue placeholder="Select a header and sub-regulation" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableParentHeaders.map((header) => (
+                  {availableTargetsByFamily[targetFamily].map((header) => (
                     <SelectItem key={header.code} value={header.code}>
                       {formatAiPopulateTargetLabel(header)}
                     </SelectItem>
@@ -901,35 +929,17 @@ export default function CoherenceMatrixPage() {
     [activeFamilyItems],
   );
 
-  const availableSubRegulationHeaders = useMemo(
-    () => {
-      const headerLabels = new Map(
-        activeFamilyItems
-          .filter((item) => !item.technicalStandard?.trim())
-          .filter((item) => !normalizeRegulationCode(item.parentRegulationCode))
-          .map((item) => [
-            normalizeRegulationCode(item.regulationCode),
-            formatParentOptionLabel({ code: item.regulationCode, label: item.regulationStatement || item.regulationCode }),
-          ]),
-      );
-
-      return activeFamilyItems
-        .filter((item) => !item.technicalStandard?.trim())
-        .filter((item) => !!normalizeRegulationCode(item.parentRegulationCode))
-        .sort((a, b) => naturalSort(a.regulationCode, b.regulationCode))
-        .reduce((acc, item) => {
-          const code = normalizeRegulationCode(item.regulationCode);
-          if (!code || acc.some((entry) => entry.code === code)) return acc;
-          acc.push({
-            code,
-            label: (item.regulationStatement || item.regulationCode).trim(),
-            parentLabel: headerLabels.get(normalizeRegulationCode(item.parentRegulationCode)),
-          });
-          return acc;
-        }, [] as { code: string; label: string; parentLabel?: string }[]);
-    },
-    [activeFamilyItems],
+  const availableTargetsByFamily = useMemo(
+    () => Object.fromEntries(
+      REGULATION_TABS.map((tab) => [
+        tab.value,
+        buildAiPopulateTargets(currentOrgItems.filter((item) => getItemFamily(item) === tab.value)),
+      ]),
+    ) as Record<RegulationFamily, AiPopulateTarget[]>,
+    [currentOrgItems],
   );
+
+  const availableSubRegulationHeaders = availableTargetsByFamily[activeRegulationTab];
 
   const browserItems = useMemo(() => {
     const rows: ComplianceRequirement[] = [];
@@ -1222,7 +1232,7 @@ export default function CoherenceMatrixPage() {
           className="h-8 w-full border-input bg-background text-sm"
         />
       </div>
-      <UploadRegulationsDialog tenantId={tenantId} organizationId={currentOrgId} regulationFamily={activeRegulationTab} availableParentHeaders={availableSubRegulationHeaders} />
+      <UploadRegulationsDialog tenantId={tenantId} organizationId={currentOrgId} regulationFamily={activeRegulationTab} availableTargetsByFamily={availableTargetsByFamily} />
       <Button variant="outline" className={cn(HEADER_COMPACT_CONTROL_CLASS, 'text-foreground hover:bg-accent/40')} onClick={() => handleOpenForm(null, 'header')}>
         <Layers className="h-4 w-4" />
         Add Header
@@ -1293,7 +1303,7 @@ export default function CoherenceMatrixPage() {
                       tenantId={tenantId}
                       organizationId={currentOrgId}
                       regulationFamily={activeRegulationTab}
-                      availableParentHeaders={availableSubRegulationHeaders}
+                      availableTargetsByFamily={availableTargetsByFamily}
                       trigger={
                         <DropdownMenuItem onSelect={(event) => event.preventDefault()}>
                           <WandSparkles className="mr-2 h-4 w-4" /> AI Populate
