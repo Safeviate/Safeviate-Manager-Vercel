@@ -464,8 +464,8 @@ export const menuConfig: MenuItem[] = [
       },
       {
         href: '/development/database',
-        label: 'Tenant Setup',
-        description: 'Manage master tenant configuration and seeder logic.',
+        label: 'Database & Tenant Setup',
+        description: 'Manage tenant configuration, database setup, and coherence matrix copies.',
         permissionId: 'development-view',
       },
       {
