@@ -2,6 +2,10 @@ import { authOptions } from '@/auth';
 import { hasHierarchicalPermission, normalizePermissionIds } from '@/lib/permission-model';
 import { isDatabaseAvailable, prisma } from '@/lib/prisma';
 import { ensureTenantConfigSchema } from '@/lib/server/bootstrap-db';
+import {
+  createMasterCoherenceMatrixSnapshot,
+  readCoherenceMatrixEntries,
+} from '@/lib/server/coherence-matrix-copy';
 import { getOrSetRouteCache, invalidateRouteCache } from '@/lib/server/route-cache';
 import { MASTER_TENANT_ID, isMasterTenantEmail } from '@/lib/server/tenant-access';
 import { getTenantIdFromSession } from '@/lib/server/session-tenant';
@@ -115,8 +119,22 @@ export async function PUT(request: Request) {
 
     const body = await request.json().catch(() => null);
     const config = body?.config;
+    const copyMasterCoherenceMatrix = body?.copyMasterCoherenceMatrix === true;
+    const replaceExistingCoherenceMatrix = body?.replaceExistingCoherenceMatrix === true;
     if (!config || typeof config !== 'object') {
       return NextResponse.json({ error: 'Invalid config payload.' }, { status: 400 });
+    }
+    if (copyMasterCoherenceMatrix && !isDeveloper && !isMaster) {
+      return NextResponse.json(
+        { error: 'Only Safeviate master administrators can copy the master coherence matrix.' },
+        { status: 403 }
+      );
+    }
+    if (copyMasterCoherenceMatrix && resolvedTenantId === MASTER_TENANT_ID) {
+      return NextResponse.json(
+        { error: 'The Safeviate master coherence matrix cannot be a copy destination.' },
+        { status: 400 }
+      );
     }
 
     await ensureTenantConfigSchema();
@@ -127,9 +145,20 @@ export async function PUT(request: Request) {
     });
 
     const existingData = (existingRow?.data as Record<string, unknown>) || {};
+    const existingMatrixEntries = readCoherenceMatrixEntries(existingData);
+    if (copyMasterCoherenceMatrix && existingMatrixEntries.length > 0 && !replaceExistingCoherenceMatrix) {
+      return NextResponse.json(
+        { error: 'This tenant already has coherence matrix data. Confirm replacement before copying.' },
+        { status: 409 }
+      );
+    }
+    const matrixSnapshot = copyMasterCoherenceMatrix
+      ? await createMasterCoherenceMatrixSnapshot()
+      : null;
     const mergedData = {
       ...existingData,
       ...config,
+      ...(matrixSnapshot ? { 'compliance-matrix': matrixSnapshot } : {}),
       ...(resolvedTenantId === MASTER_TENANT_ID ? { name: MASTER_TENANT_NAME } : {}),
     };
 
@@ -147,7 +176,11 @@ export async function PUT(request: Request) {
 
     invalidateRouteCache(`tenant-config:${resolvedTenantId}`);
 
-    return NextResponse.json({ ok: true, config: mergedData }, { status: 200 });
+    return NextResponse.json({
+      ok: true,
+      config: mergedData,
+      coherenceMatrixCopied: matrixSnapshot?.length ?? 0,
+    }, { status: 200 });
   } catch (error) {
     console.error('[tenant-config] failed to save config:', error);
     return NextResponse.json(

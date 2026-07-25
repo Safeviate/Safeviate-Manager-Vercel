@@ -1,4 +1,5 @@
 import { authOptions } from '@/auth';
+import { prisma } from '@/lib/prisma';
 import { MASTER_TENANT_ID, isMasterTenantEmail, resolveTenantOverride } from '@/lib/server/tenant-access';
 import { getServerSession } from 'next-auth';
 
@@ -10,17 +11,25 @@ export async function getTenantIdFromSession(request: Request, fallbackTenantId?
     return null;
   }
 
-  const baseTenantId = session?.user?.tenantId?.trim() || fallbackTenantId || null;
-
-  if (!baseTenantId) {
-    return null;
-  }
-
   if (isMasterTenantEmail(email)) {
+    const baseTenantId = session?.user?.tenantId?.trim() || fallbackTenantId || null;
+    if (!baseTenantId) {
+      return null;
+    }
     return resolveTenantOverride(request, email, baseTenantId);
   }
 
-  return baseTenantId;
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { tenantId: true },
+    });
+
+    return user?.tenantId?.trim() || null;
+  } catch (error) {
+    console.error('[tenant] Failed to resolve the signed-in user tenant:', { email, error });
+    return null;
+  }
 }
 
 export async function getTenantIdForRoute(

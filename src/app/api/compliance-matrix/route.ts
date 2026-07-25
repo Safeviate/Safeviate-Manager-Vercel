@@ -246,7 +246,9 @@ async function getConfig(tenantId: string) {
 export async function GET(request: Request) {
   try {
     const tenantId = await getTenantId(request);
-    if (!tenantId) return NextResponse.json({ items: [] }, { status: 200 });
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Unable to resolve the signed-in tenant.' }, { status: 401 });
+    }
     const config = await getConfig(tenantId);
     const items = Array.isArray(config['compliance-matrix'])
       ? dedupeMatrixEntries(
@@ -255,8 +257,8 @@ export async function GET(request: Request) {
       : [];
     return NextResponse.json({ items }, { status: 200 });
   } catch (error) {
-    console.error('[compliance-matrix] fallback to empty list:', error);
-    return NextResponse.json({ items: [] }, { status: 200 });
+    console.error('[compliance-matrix] Failed to load matrix:', error);
+    return NextResponse.json({ error: 'Unable to load the coherence matrix.' }, { status: 500 });
   }
 }
 

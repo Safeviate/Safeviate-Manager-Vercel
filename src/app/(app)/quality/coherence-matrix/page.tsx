@@ -780,13 +780,17 @@ export default function CoherenceMatrixPage() {
       ]);
 
       const [matrixPayload, personnelPayload, orgPayload] = await Promise.all([
-        matrixResponse.json().catch(() => ({ items: [] })),
+        matrixResponse.json().catch(() => null) as Promise<{ items?: ComplianceRequirement[]; error?: string } | null>,
         personnelResponse.json().catch(() => ({ personnel: [] })),
         orgResponse.json().catch(() => ({ organizations: [] })),
       ]);
 
+      if (!matrixResponse.ok) {
+        throw new Error(matrixPayload?.error || 'Unable to load the coherence matrix.');
+      }
+
       setComplianceItems(
-        Array.isArray(matrixPayload.items)
+        Array.isArray(matrixPayload?.items)
           ? dedupeComplianceItems(matrixPayload.items.map((item: ComplianceRequirement) => sanitizeComplianceMatrixEntry(item)))
           : [],
       );
@@ -794,10 +798,15 @@ export default function CoherenceMatrixPage() {
       setOrganizations(Array.isArray(orgPayload.organizations) ? orgPayload.organizations : []);
     } catch (error) {
       console.error('Failed to load matrix data', error);
+      toast({
+        variant: 'destructive',
+        title: 'Coherence Matrix Unavailable',
+        description: error instanceof Error ? error.message : 'Unable to load the coherence matrix.',
+      });
     } finally {
       setIsLoading(false);
     }
-  }, [resolvedTenantId]);
+  }, [resolvedTenantId, toast]);
 
   useEffect(() => {
     void loadData();

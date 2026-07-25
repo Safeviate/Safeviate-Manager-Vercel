@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, PlusCircle, Save, Search, Trash2 } from 'lucide-react';
+import { ChevronRight, Copy, PlusCircle, Save, Search, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { HEADER_COMPACT_CONTROL_CLASS, HEADER_SECONDARY_BUTTON_CLASS, MainPageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -141,6 +141,8 @@ export function DatabaseForm({
   const [pageLayoutSettings, setPageLayoutSettings] = useState<PageLayoutSettings>(() => buildDefaultPageLayoutSettings());
   const [dashboardSettings, setDashboardSettings] = useState<CompanyDashboardSettings>(buildNewTenantDashboardSettings);
   const [defaultRoleTemplate, setDefaultRoleTemplate] = useState<'standard' | 'none'>('standard');
+  const [copyMasterCoherenceMatrix, setCopyMasterCoherenceMatrix] = useState(true);
+  const [isCopyingCoherenceMatrix, setIsCopyingCoherenceMatrix] = useState(false);
   const [menuFilter, setMenuFilter] = useState('');
   const isEditingExistingTenant = Boolean(selectedTenantId);
   const isCreatingNewTenant = !selectedTenantId;
@@ -260,6 +262,7 @@ export function DatabaseForm({
     setPageLayoutSettings(buildDefaultPageLayoutSettings());
     setDashboardSettings(buildNewTenantDashboardSettings());
     setDefaultRoleTemplate('standard');
+    setCopyMasterCoherenceMatrix(true);
     setMenuFilter('');
   };
 
@@ -424,6 +427,7 @@ export function DatabaseForm({
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          copyMasterCoherenceMatrix: isNewTenant && copyMasterCoherenceMatrix,
           config: {
             id: tenantId,
             name: tenantData.name,
@@ -476,6 +480,45 @@ export function DatabaseForm({
         title: 'Commit Failure',
         description: error instanceof Error ? error.message : 'System fault during persistence.',
       });
+    }
+  };
+
+  const handleCopyMasterCoherenceMatrix = async () => {
+    if (!selectedTenantId || selectedTenantId === MASTER_TENANT_ID) return;
+
+    const confirmed = window.confirm(
+      'This will replace this tenant\'s coherence matrix with a new independent snapshot of the Safeviate master matrix. Existing tenant matrix records will be deleted. Continue?'
+    );
+    if (!confirmed) return;
+
+    setIsCopyingCoherenceMatrix(true);
+    try {
+      const response = await fetch('/api/admin/tenants/copy-coherence-matrix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetTenantId: selectedTenantId,
+          replaceExisting: true,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to copy the master coherence matrix.');
+      }
+
+      window.dispatchEvent(new Event('safeviate-tenant-config-updated'));
+      toast({
+        title: 'Coherence Matrix Copied',
+        description: `${payload?.copied ?? 0} independent records copied. Changes in this tenant will not affect Safeviate.`,
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Copy Failed',
+        description: error instanceof Error ? error.message : 'Failed to copy the master coherence matrix.',
+      });
+    } finally {
+      setIsCopyingCoherenceMatrix(false);
     }
   };
 
@@ -556,15 +599,27 @@ export function DatabaseForm({
                 {modeBadgeLabel}
               </Badge>
               {selectedTenantId && selectedTenantId !== MASTER_TENANT_ID ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => void handleDeleteTenant()}
-                  className={cn(HEADER_COMPACT_CONTROL_CLASS, 'px-4')}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Delete Tenant
-                </Button>
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void handleCopyMasterCoherenceMatrix()}
+                    disabled={isCopyingCoherenceMatrix}
+                    className={cn(HEADER_SECONDARY_BUTTON_CLASS, 'px-4')}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    {isCopyingCoherenceMatrix ? 'Copying Matrix' : 'Copy Master Matrix'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => void handleDeleteTenant()}
+                    className={cn(HEADER_COMPACT_CONTROL_CLASS, 'px-4')}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete Tenant
+                  </Button>
+                </>
               ) : null}
               <Button
                 onClick={() => void handleSaveTenant()}
@@ -659,7 +714,7 @@ export function DatabaseForm({
                       </div>
 
                       {isCreatingNewTenant ? (
-                        <div className="space-y-2 rounded-2xl border bg-muted/5 p-3">
+                        <div className="space-y-3 rounded-2xl border bg-muted/5 p-3">
                           <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Default Roles</Label>
                           <Select value={defaultRoleTemplate} onValueChange={(value) => setDefaultRoleTemplate(value === 'none' ? 'none' : 'standard')}>
                             <SelectTrigger className="h-10 rounded-xl border-2 bg-background text-[10px] font-black uppercase tracking-tight shadow-none">
@@ -673,6 +728,21 @@ export function DatabaseForm({
                           <p className="text-xs text-muted-foreground">
                             Standard creates tenant-local Administrator and Viewer roles using the current CRUD permission model.
                           </p>
+                          <div className="flex items-start gap-3 border-t pt-3">
+                            <Checkbox
+                              id="copy-master-coherence-matrix"
+                              checked={copyMasterCoherenceMatrix}
+                              onCheckedChange={(checked) => setCopyMasterCoherenceMatrix(checked === true)}
+                            />
+                            <div className="space-y-1">
+                              <Label htmlFor="copy-master-coherence-matrix" className="text-[10px] font-black uppercase tracking-widest">
+                                Copy Safeviate Master Coherence Matrix
+                              </Label>
+                              <p className="text-xs text-muted-foreground">
+                                Creates an independent tenant-owned snapshot. Later edits in either tenant do not sync across.
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       ) : null}
                     </CardContent>
