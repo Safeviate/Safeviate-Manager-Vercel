@@ -18,7 +18,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Tenant } from '@/types/quality';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
-import { getTenantThemeLocalOverrideKey } from '@/lib/tenant-theme-storage';
 import {
   PAGE_FORMAT_PRIMARY_BUTTON_CLASS,
   PAGE_FORMAT_SECONDARY_BUTTON_CLASS,
@@ -98,47 +97,6 @@ const PALETTE_PRESETS: PalettePreset[] = [
   },
 ];
 
-function mergeTenantConfig(
-  serverConfig: Record<string, unknown> | null,
-  localConfig: Record<string, unknown> | null
-) {
-  if (!serverConfig && !localConfig) return null;
-  if (!serverConfig) return localConfig;
-  if (!localConfig) return serverConfig;
-
-  const serverTheme =
-    serverConfig.theme && typeof serverConfig.theme === 'object'
-      ? (serverConfig.theme as Record<string, unknown>)
-      : null;
-  const localTheme =
-    localConfig.theme && typeof localConfig.theme === 'object'
-      ? (localConfig.theme as Record<string, unknown>)
-      : null;
-
-  return {
-    ...localConfig,
-    ...serverConfig,
-    theme: serverTheme || localTheme
-      ? {
-          ...(localTheme || {}),
-          ...(serverTheme || {}),
-        }
-      : undefined,
-  };
-}
-
-function readLocalTenantOverride(storageKey: string) {
-  if (typeof window === 'undefined') return null;
-
-  try {
-    const stored = window.localStorage.getItem(storageKey)
-      || window.localStorage.getItem('safeviate:tenant-config-local-override');
-    return stored ? (JSON.parse(stored) as Record<string, unknown>) : null;
-  } catch {
-    return null;
-  }
-}
-
 export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   const { toast } = useToast();
   const { tenantId } = useUserProfile();
@@ -192,8 +150,6 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   const [isSidebarLogoSaved, setIsSidebarLogoSaved] = useState(false);
   const [openAdvancedSections, setOpenAdvancedSections] = useState<string[]>([]);
   const sidebarLogoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const localTenantConfigKey = getTenantThemeLocalOverrideKey(tenantId);
-
   const canManageOrganization = hasPermission('admin-settings-edit') || hasPermission('settings-edit');
 
   const buildOrganizationTheme = useCallback((overrides?: {
@@ -252,16 +208,11 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         const configPayload = await configResponse.json().catch(() => ({}));
         const tenant = mePayload?.tenant;
         const tenantConfig = configPayload?.config ?? null;
-        const localOverride = readLocalTenantOverride(localTenantConfigKey);
-
         if (tenant) {
-          const mergedConfig = mergeTenantConfig(
-            tenantConfig && typeof tenantConfig === 'object'
-              ? (tenantConfig as Record<string, unknown>)
-              : null,
-            localOverride
-          );
-          const mergedTenant = { ...tenant, ...(mergedConfig || {}) } as Tenant;
+          const serverConfig = tenantConfig && typeof tenantConfig === 'object'
+            ? (tenantConfig as Record<string, unknown>)
+            : null;
+          const mergedTenant = { ...tenant, ...(serverConfig || {}) } as Tenant;
           setTenants([mergedTenant]);
         } else {
           setTenants([]);
@@ -274,7 +225,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
       }
     };
     void load();
-  }, [localTenantConfigKey]);
+  }, []);
 
   const persistOrganizationTheme = useCallback(async (updatedTheme: Record<string, unknown>) => {
     setIsSavingOrganization(true);
@@ -295,13 +246,6 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         throw new Error(payload?.error || 'Could not save tenant configuration.');
       }
 
-      try {
-        window.localStorage.setItem(localTenantConfigKey, JSON.stringify(configUpdate));
-        window.dispatchEvent(new Event('storage'));
-      } catch {
-        // Ignore browser storage failures and rely on the server copy.
-      }
-
       window.dispatchEvent(new Event('safeviate-tenant-config-updated'));
       loadTenants();
 
@@ -310,23 +254,15 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         description: "Organization default colors have been synchronized with the database for all users.",
       });
     } catch (e) {
-      try {
-        window.localStorage.setItem(localTenantConfigKey, JSON.stringify(configUpdate));
-        window.dispatchEvent(new Event('storage'));
-        window.dispatchEvent(new Event('safeviate-tenant-config-updated'));
-        loadTenants();
-      } catch {
-        // Ignore browser storage failures.
-      }
-
       toast({
-        title: "Saved Locally",
-        description: e instanceof Error ? `${e.message} The branding was kept in this browser.` : "The organization branding could not be saved to the server, but the changes were kept in this browser.",
+        title: "Branding Not Saved",
+        description: e instanceof Error ? e.message : "The organization branding could not be saved to the tenant.",
+        variant: "destructive",
       });
     } finally {
       setIsSavingOrganization(false);
     }
-  }, [loadTenants, tenantId, toast, localTenantConfigKey]);
+  }, [loadTenants, tenantId, toast]);
 
   const handleSaveToOrganization = async () => {
     await persistOrganizationTheme(buildOrganizationTheme());

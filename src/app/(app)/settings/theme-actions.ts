@@ -30,19 +30,30 @@ export async function saveOrganizationThemeAction(themeConfig: any) {
 
     await ensureTenantConfigSchema();
 
-    // The data we save is the theme configuration object
     const tenantId = auth.tenantId;
-    
-    await prisma.tenantConfig.upsert({
-      where: { tenantId },
-      create: {
-        tenantId,
-        data: themeConfig,
-      },
-      update: {
-        data: themeConfig,
-        updatedAt: new Date(),
-      },
+
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.tenantConfig.findUnique({
+        where: { tenantId },
+        select: { data: true },
+      });
+      const existingData = (existing?.data as Record<string, unknown>) || {};
+      const mergedData = {
+        ...existingData,
+        theme: themeConfig,
+      };
+
+      await tx.tenantConfig.upsert({
+        where: { tenantId },
+        create: {
+          tenantId,
+          data: mergedData,
+        },
+        update: {
+          data: mergedData,
+          updatedAt: new Date(),
+        },
+      });
     });
 
     revalidatePath('/');

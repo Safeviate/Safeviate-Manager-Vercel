@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useUserProfile } from './use-user-profile';
 import type { Tenant } from '@/types/quality';
 import { getOrSetClientApiCache, invalidateClientApiCache } from '@/lib/client/api-cache';
-import { getTenantThemeLocalOverrideKey } from '@/lib/tenant-theme-storage';
 const FALLBACK_TENANT_ID = 'safeviate';
 const FALLBACK_TENANT_NAME = 'Safeviate';
 const TENANT_CONFIG_CACHE_TTL_MS = 5 * 60_000;
@@ -17,49 +16,6 @@ declare global {
     };
   }
 }
-
-const safeJsonParse = <T,>(text: string): T | null => {
-  if (!text.trim()) return null;
-
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    return null;
-  }
-};
-
-const mergeTenantConfig = (
-  serverConfig: Record<string, unknown> | null,
-  localConfig: Record<string, unknown> | null
-) => {
-  if (!serverConfig && !localConfig) return null;
-  if (!serverConfig) return localConfig;
-  if (!localConfig) return serverConfig;
-
-  const serverTheme =
-    serverConfig.theme && typeof serverConfig.theme === 'object'
-      ? (serverConfig.theme as Record<string, unknown>)
-      : null;
-  const localTheme =
-    localConfig.theme && typeof localConfig.theme === 'object'
-      ? (localConfig.theme as Record<string, unknown>)
-      : null;
-
-  return {
-    ...localConfig,
-    ...serverConfig,
-    theme: serverTheme || localTheme
-      ? {
-          ...(localTheme || {}),
-          ...(serverTheme || {}),
-          sidebarLogoImage:
-            typeof localTheme?.sidebarLogoImage === 'string' && localTheme.sidebarLogoImage.trim()
-              ? localTheme.sidebarLogoImage
-              : (typeof serverTheme?.sidebarLogoImage === 'string' ? serverTheme.sidebarLogoImage : ''),
-        }
-      : undefined,
-  };
-};
 
 const normalizeTenantSummary = (
   tenant: {
@@ -79,15 +35,6 @@ const normalizeTenantSummary = (
   } as Tenant;
 };
 
-const getScopedLocalOverride = (
-  override: Record<string, unknown> | null,
-  tenantId: string
-) => {
-  if (!override || typeof override !== 'object') return null;
-  const overrideTenantId = typeof override.id === 'string' ? override.id.trim() : '';
-  return overrideTenantId === tenantId ? override : null;
-};
-
 /**
  * A custom hook to fetch the configuration for the current tenant.
  * Supports a developer override for testing industry-specific layouts.
@@ -97,56 +44,11 @@ export const useTenantConfig = () => {
     ? (window.__SAFEVIATE_THEME_BOOTSTRAP__?.tenant as Tenant | null | undefined) ?? null
     : null;
   const { tenantId, tenant: profileTenant, userProfile, isLoading: isProfileLoading } = useUserProfile();
-  const localTenantConfigKey = getTenantThemeLocalOverrideKey(tenantId || FALLBACK_TENANT_ID);
   const [tenantData, setTenantData] = useState<Tenant | null>(bootstrapTenant);
   const [isLoading, setIsLoading] = useState(!bootstrapTenant);
   const [error, setError] = useState<Error | null>(null);
-  const [localOverride, setLocalOverride] = useState<Record<string, unknown> | null>(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const scopedStored = window.localStorage.getItem(localTenantConfigKey);
-      if (scopedStored) {
-        return safeJsonParse<Record<string, unknown>>(scopedStored);
-      }
-      const legacyStored = window.localStorage.getItem('safeviate:tenant-config-local-override');
-      return legacyStored ? safeJsonParse<Record<string, unknown>>(legacyStored) : null;
-    } catch {
-      return null;
-    }
-  });
   const [configRefreshToken, setConfigRefreshToken] = useState(0);
   const resolvedTenantId = tenantId || FALLBACK_TENANT_ID;
-  const scopedLocalOverride = useMemo(
-    () => getScopedLocalOverride(localOverride, resolvedTenantId),
-    [localOverride, resolvedTenantId]
-  );
-
-  const buildLocalTenant = (override: Record<string, unknown> | null): Tenant => ({
-    id: FALLBACK_TENANT_ID,
-    name: FALLBACK_TENANT_NAME,
-    ...(override || {}),
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const syncOverride = () => {
-      try {
-        const tenantConfigStored = window.localStorage.getItem(localTenantConfigKey)
-          || window.localStorage.getItem('safeviate:tenant-config-local-override');
-        setLocalOverride(tenantConfigStored ? safeJsonParse<Record<string, unknown>>(tenantConfigStored) : null);
-      } catch {
-        setLocalOverride(null);
-      }
-    };
-
-    syncOverride();
-    window.addEventListener('storage', syncOverride);
-
-    return () => {
-      window.removeEventListener('storage', syncOverride);
-    };
-  }, [localTenantConfigKey]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -160,11 +62,10 @@ export const useTenantConfig = () => {
       invalidateClientApiCache(`tenant-config:${nextTenantId}`);
       setIsLoading(true);
       setError(null);
-      setTenantData((current) => ({
-        ...(current || {}),
+      setTenantData({
         id: nextTenantId,
-        name: nextTenantName || (nextTenantId === FALLBACK_TENANT_ID ? FALLBACK_TENANT_NAME : current?.name || nextTenantId),
-      } as Tenant));
+        name: nextTenantName || (nextTenantId === FALLBACK_TENANT_ID ? FALLBACK_TENANT_NAME : nextTenantId),
+      } as Tenant);
       setConfigRefreshToken((current) => current + 1);
     };
 
@@ -207,26 +108,20 @@ export const useTenantConfig = () => {
           }
         );
         const tenantConfig = configPayload?.config ?? null;
-        const mergedConfig = mergeTenantConfig(
-          tenantConfig && typeof tenantConfig === 'object'
-            ? (tenantConfig as Record<string, unknown>)
-            : null,
-          scopedLocalOverride
-        );
+        const serverConfig = tenantConfig && typeof tenantConfig === 'object'
+          ? (tenantConfig as Record<string, unknown>)
+          : null;
         if (!cancelled) {
           if (profileTenant) {
-            setTenantData((current) => {
-              const normalizedProfileTenant = normalizeTenantSummary(profileTenant, current ?? bootstrapTenant);
+            setTenantData(() => {
+              const normalizedProfileTenant = normalizeTenantSummary(profileTenant);
               return normalizedProfileTenant
                 ? {
-                    ...(current || bootstrapTenant || {}),
                     ...normalizedProfileTenant,
-                    ...(mergedConfig || {}),
+                    ...(serverConfig || {}),
                   }
-                : (current || bootstrapTenant || null);
+                : null;
             });
-          } else if (scopedLocalOverride) {
-            setTenantData(buildLocalTenant(scopedLocalOverride));
           } else if (bootstrapTenant) {
             setTenantData(bootstrapTenant);
           } else {
@@ -237,7 +132,7 @@ export const useTenantConfig = () => {
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err : new Error('Failed to load tenant configuration.'));
-          if (!bootstrapTenant && !scopedLocalOverride) {
+          if (!bootstrapTenant) {
             setTenantData((current) => current);
           }
         }
@@ -260,17 +155,18 @@ export const useTenantConfig = () => {
             }
           );
           if (!cancelled) {
-            const nextConfig = mergeTenantConfig(
-              payload?.config && typeof payload.config === 'object'
-                ? (payload.config as Record<string, unknown>)
-                : null,
-              scopedLocalOverride
-            );
+            const nextConfig = payload?.config && typeof payload.config === 'object'
+              ? (payload.config as Record<string, unknown>)
+              : null;
             if (nextConfig && Object.keys(nextConfig).length > 0) {
               setTenantData((current) =>
                 current
                   ? { ...current, ...nextConfig }
-                  : buildLocalTenant(nextConfig)
+                  : {
+                      id: resolvedTenantId,
+                      name: resolvedTenantId === FALLBACK_TENANT_ID ? FALLBACK_TENANT_NAME : resolvedTenantId,
+                      ...nextConfig,
+                    } as Tenant
               );
             }
           }
@@ -284,7 +180,7 @@ export const useTenantConfig = () => {
       cancelled = true;
       window.removeEventListener('safeviate-tenant-config-updated', handleUpdate);
     };
-  }, [tenantId, profileTenant, scopedLocalOverride, userProfile?.id, isProfileLoading, resolvedTenantId, bootstrapTenant, configRefreshToken]);
+  }, [tenantId, profileTenant, userProfile?.id, isProfileLoading, resolvedTenantId, bootstrapTenant, configRefreshToken]);
 
   return {
     tenant: tenantData,

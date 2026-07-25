@@ -403,10 +403,6 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   // --- Auto-sync with shared tenant branding ---
   useEffect(() => {
-    if (!tenant?.theme) {
-      return;
-    }
-
     if (isAuthRoute) {
       return;
     }
@@ -488,7 +484,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setMatrixTheme(nextMatrixTheme);
     setUiModeState('classic');
     setScaleState(nextScale);
-  }, [isAuthRoute, tenant?.theme]);
+  }, [isAuthRoute, tenant?.id, tenant?.theme]);
 
   useEffect(() => {
     const nextSavedThemes = getInitialState<SavedTheme[]>(

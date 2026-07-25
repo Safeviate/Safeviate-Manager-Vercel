@@ -133,6 +133,20 @@ export async function PUT(request: Request) {
   await ensureRolesSchema();
 
   await prisma.$transaction(async (tx) => {
+    // Tenant updates must preserve tenant-owned configuration such as the
+    // coherence matrix instead of replacing the entire JSON document.
+    const existingConfig = await tx.tenantConfig.findUnique({
+      where: { tenantId: normalizedTenantId },
+      select: { data: true },
+    });
+    const existingData = (existingConfig?.data as Record<string, unknown>) || {};
+    const mergedConfig = {
+      ...existingData,
+      id: normalizedTenantId,
+      name: normalizedTenantName,
+      defaultRoleTemplate: roleTemplate,
+    };
+
     await tx.tenant.upsert({
       where: { id: normalizedTenantId },
       update: {
@@ -149,18 +163,10 @@ export async function PUT(request: Request) {
       where: { tenantId: normalizedTenantId },
       create: {
         tenantId: normalizedTenantId,
-        data: {
-          id: normalizedTenantId,
-          name: normalizedTenantName,
-          defaultRoleTemplate: roleTemplate,
-        },
+        data: mergedConfig,
       },
       update: {
-        data: {
-          id: normalizedTenantId,
-          name: normalizedTenantName,
-          defaultRoleTemplate: roleTemplate,
-        },
+        data: mergedConfig,
         updatedAt: new Date(),
       },
     });

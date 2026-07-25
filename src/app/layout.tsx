@@ -131,7 +131,6 @@ function buildThemeBootstrapScript(bootstrap: TenantBootstrapConfig) {
 
   return `
 (() => {
-  const LOCAL_TENANT_CONFIG_KEY = 'safeviate:tenant-config-local-override';
   const SCALE_KEY = 'safeviate-scale';
   const serverTheme = ${serializedServerTheme};
   const serverTenant = ${serializedServerTenant};
@@ -249,47 +248,27 @@ function buildThemeBootstrapScript(bootstrap: TenantBootstrapConfig) {
   try {
     const pathname = window.location.pathname || '';
     const isAuthRoute = authRoutes.some((route) => pathname === route || pathname.startsWith(route + '/'));
-    const serverTenantId = serverTenant && typeof serverTenant.id === 'string' ? serverTenant.id.trim() : '';
-    const scopedLocalTenantConfigKey = serverTenantId ? LOCAL_TENANT_CONFIG_KEY + ':' + serverTenantId : LOCAL_TENANT_CONFIG_KEY;
-    const raw = window.localStorage.getItem(scopedLocalTenantConfigKey) || window.localStorage.getItem(LOCAL_TENANT_CONFIG_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    const parsedTenantId = parsed && typeof parsed.id === 'string' ? parsed.id.trim() : '';
-    const scopedLocalOverride = !isAuthRoute && serverTenantId && parsedTenantId === serverTenantId ? parsed : null;
-    const localTheme = scopedLocalOverride && scopedLocalOverride.theme && typeof scopedLocalOverride.theme === 'object' ? scopedLocalOverride.theme : null;
-
-    applyColorGroup({ ...defaults.main, ...(serverTheme && serverTheme.main ? serverTheme.main : {}), ...(localTheme && localTheme.main ? localTheme.main : {}) });
-    applyColorGroup({ ...defaults.button, ...(serverTheme && serverTheme.button ? serverTheme.button : {}), ...(localTheme && localTheme.button ? localTheme.button : {}) });
-    applyColorGroup({ ...defaults.card, ...(serverTheme && serverTheme.card ? serverTheme.card : {}), ...(localTheme && localTheme.card ? localTheme.card : {}) });
-    applyColorGroup({ ...defaults.popover, ...(serverTheme && serverTheme.popover ? serverTheme.popover : {}), ...(localTheme && localTheme.popover ? localTheme.popover : {}) });
-    applyColorGroup({ ...defaults.sidebar, ...(serverTheme && serverTheme.sidebar ? serverTheme.sidebar : {}), ...(localTheme && localTheme.sidebar ? localTheme.sidebar : {}) });
-    applyColorGroup({ ...defaults.header, ...(serverTheme && serverTheme.header ? serverTheme.header : {}), ...(localTheme && localTheme.header ? localTheme.header : {}) });
-    applyColorGroup({ ...defaults.swimlane, ...(serverTheme && serverTheme.swimlane ? serverTheme.swimlane : {}), ...(localTheme && localTheme.swimlane ? localTheme.swimlane : {}) });
-    applyColorGroup({ ...defaults.matrix, ...(serverTheme && serverTheme.matrix ? serverTheme.matrix : {}), ...(localTheme && localTheme.matrix ? localTheme.matrix : {}) });
+    applyColorGroup({ ...defaults.main, ...(serverTheme && serverTheme.main ? serverTheme.main : {}) });
+    applyColorGroup({ ...defaults.button, ...(serverTheme && serverTheme.button ? serverTheme.button : {}) });
+    applyColorGroup({ ...defaults.card, ...(serverTheme && serverTheme.card ? serverTheme.card : {}) });
+    applyColorGroup({ ...defaults.popover, ...(serverTheme && serverTheme.popover ? serverTheme.popover : {}) });
+    applyColorGroup({ ...defaults.sidebar, ...(serverTheme && serverTheme.sidebar ? serverTheme.sidebar : {}) });
+    applyColorGroup({ ...defaults.header, ...(serverTheme && serverTheme.header ? serverTheme.header : {}) });
+    applyColorGroup({ ...defaults.swimlane, ...(serverTheme && serverTheme.swimlane ? serverTheme.swimlane : {}) });
+    applyColorGroup({ ...defaults.matrix, ...(serverTheme && serverTheme.matrix ? serverTheme.matrix : {}) });
 
     const sidebarBackgroundImage =
-      localTheme && typeof localTheme.sidebarBackgroundImage === 'string'
-        ? localTheme.sidebarBackgroundImage
-        : (serverTheme && typeof serverTheme.sidebarBackgroundImage === 'string' ? serverTheme.sidebarBackgroundImage : '');
+      serverTheme && typeof serverTheme.sidebarBackgroundImage === 'string' ? serverTheme.sidebarBackgroundImage : '';
     const headerBackgroundImage =
-      localTheme && typeof localTheme.headerBackgroundImage === 'string'
-        ? localTheme.headerBackgroundImage
-        : (serverTheme && typeof serverTheme.headerBackgroundImage === 'string' ? serverTheme.headerBackgroundImage : '');
+      serverTheme && typeof serverTheme.headerBackgroundImage === 'string' ? serverTheme.headerBackgroundImage : '';
     const sidebarLogoImage =
-      localTheme && typeof localTheme.sidebarLogoImage === 'string' && localTheme.sidebarLogoImage.trim()
-        ? localTheme.sidebarLogoImage
-        : (serverTheme && typeof serverTheme.sidebarLogoImage === 'string' ? serverTheme.sidebarLogoImage : '');
+      serverTheme && typeof serverTheme.sidebarLogoImage === 'string' ? serverTheme.sidebarLogoImage : '';
     const sidebarLogoBackgroundColor =
-      localTheme && typeof localTheme.sidebarLogoBackgroundColor === 'string'
-        ? localTheme.sidebarLogoBackgroundColor
-        : (serverTheme && typeof serverTheme.sidebarLogoBackgroundColor === 'string' ? serverTheme.sidebarLogoBackgroundColor : '');
+      serverTheme && typeof serverTheme.sidebarLogoBackgroundColor === 'string' ? serverTheme.sidebarLogoBackgroundColor : '';
     const sidebarBackgroundOpacity =
-      typeof (localTheme && localTheme.sidebarBackgroundOpacity) === 'number'
-        ? localTheme.sidebarBackgroundOpacity
-        : (typeof (serverTheme && serverTheme.sidebarBackgroundOpacity) === 'number' ? serverTheme.sidebarBackgroundOpacity : 0.2);
+      typeof (serverTheme && serverTheme.sidebarBackgroundOpacity) === 'number' ? serverTheme.sidebarBackgroundOpacity : 0.2;
     const headerBackgroundOpacity =
-      typeof (localTheme && localTheme.headerBackgroundOpacity) === 'number'
-        ? localTheme.headerBackgroundOpacity
-        : (typeof (serverTheme && serverTheme.headerBackgroundOpacity) === 'number' ? serverTheme.headerBackgroundOpacity : 0.22);
+      typeof (serverTheme && serverTheme.headerBackgroundOpacity) === 'number' ? serverTheme.headerBackgroundOpacity : 0.22;
 
     document.documentElement.style.setProperty('--sidebar-background-image', sidebarBackgroundImage ? \`url("\${sidebarBackgroundImage}")\` : 'none');
     document.documentElement.style.setProperty('--header-background-image', headerBackgroundImage ? \`url("\${headerBackgroundImage}")\` : 'none');
@@ -300,9 +279,7 @@ function buildThemeBootstrapScript(bootstrap: TenantBootstrapConfig) {
 
     if (!isAuthRoute) {
       const themeScale =
-        typeof (localTheme && localTheme.scale) === 'number'
-          ? localTheme.scale
-          : (typeof (serverTheme && serverTheme.scale) === 'number' ? serverTheme.scale : null);
+        typeof (serverTheme && serverTheme.scale) === 'number' ? serverTheme.scale : null;
       const localScaleRaw = window.localStorage.getItem(SCALE_KEY);
       const localScale = localScaleRaw ? JSON.parse(localScaleRaw) : null;
       scale = typeof themeScale === 'number' ? themeScale : (typeof localScale === 'number' ? localScale : 100);
@@ -313,14 +290,14 @@ function buildThemeBootstrapScript(bootstrap: TenantBootstrapConfig) {
 
     window.__SAFEVIATE_THEME_BOOTSTRAP__ = {
       theme: {
-        main: { ...defaults.main, ...(serverTheme && serverTheme.main ? serverTheme.main : {}), ...(localTheme && localTheme.main ? localTheme.main : {}) },
-        button: { ...defaults.button, ...(serverTheme && serverTheme.button ? serverTheme.button : {}), ...(localTheme && localTheme.button ? localTheme.button : {}) },
-        card: { ...defaults.card, ...(serverTheme && serverTheme.card ? serverTheme.card : {}), ...(localTheme && localTheme.card ? localTheme.card : {}) },
-        popover: { ...defaults.popover, ...(serverTheme && serverTheme.popover ? serverTheme.popover : {}), ...(localTheme && localTheme.popover ? localTheme.popover : {}) },
-        sidebar: { ...defaults.sidebar, ...(serverTheme && serverTheme.sidebar ? serverTheme.sidebar : {}), ...(localTheme && localTheme.sidebar ? localTheme.sidebar : {}) },
-        header: { ...defaults.header, ...(serverTheme && serverTheme.header ? serverTheme.header : {}), ...(localTheme && localTheme.header ? localTheme.header : {}) },
-        swimlane: { ...defaults.swimlane, ...(serverTheme && serverTheme.swimlane ? serverTheme.swimlane : {}), ...(localTheme && localTheme.swimlane ? localTheme.swimlane : {}) },
-        matrix: { ...defaults.matrix, ...(serverTheme && serverTheme.matrix ? serverTheme.matrix : {}), ...(localTheme && localTheme.matrix ? localTheme.matrix : {}) },
+        main: { ...defaults.main, ...(serverTheme && serverTheme.main ? serverTheme.main : {}) },
+        button: { ...defaults.button, ...(serverTheme && serverTheme.button ? serverTheme.button : {}) },
+        card: { ...defaults.card, ...(serverTheme && serverTheme.card ? serverTheme.card : {}) },
+        popover: { ...defaults.popover, ...(serverTheme && serverTheme.popover ? serverTheme.popover : {}) },
+        sidebar: { ...defaults.sidebar, ...(serverTheme && serverTheme.sidebar ? serverTheme.sidebar : {}) },
+        header: { ...defaults.header, ...(serverTheme && serverTheme.header ? serverTheme.header : {}) },
+        swimlane: { ...defaults.swimlane, ...(serverTheme && serverTheme.swimlane ? serverTheme.swimlane : {}) },
+        matrix: { ...defaults.matrix, ...(serverTheme && serverTheme.matrix ? serverTheme.matrix : {}) },
         sidebarBackgroundImage,
         headerBackgroundImage,
         sidebarLogoImage,
