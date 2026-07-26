@@ -108,14 +108,14 @@ const itemFormSchema = z.object({
 const headerFormSchema = z.object({
     regulationFamily: z.enum(['sacaa-cars', 'sacaa-cats', 'ohs']),
     regulationCode: z.string().min(1, 'Code is required.'),
-    responsibleManagerId: z.string().min(1, 'Responsible person is required.'),
+    responsibleManagerId: z.string().optional(),
 });
 
 const subheaderFormSchema = z.object({
     regulationFamily: z.enum(['sacaa-cars', 'sacaa-cats', 'ohs']),
     parentRegulationCode: z.string().min(1, 'Parent header is required.'),
     regulationCode: z.string().min(1, 'Title is required.'),
-    responsibleManagerId: z.string().min(1, 'Responsible person is required.'),
+    responsibleManagerId: z.string().optional(),
 }).superRefine((values, ctx) => {
     const parentCode = normalizeRegulationCode(values.parentRegulationCode);
     const regulationCode = normalizeRegulationCode(values.regulationCode);
@@ -315,9 +315,9 @@ export function ComplianceItemForm({
             title: 'Complete Required Fields',
             description:
                 mode === 'header'
-                    ? 'Add the header and responsible person before saving.'
+                    ? 'Add the header before saving.'
                     : mode === 'subheader'
-                        ? 'Add the subheader title, select the parent header, and choose the responsible person before saving.'
+                        ? 'Add the subheader title and select the parent header before saving.'
                         : 'Complete the regulation code, parent regulation or sub-regulation, title, company reference, and any other required fields before saving.',
         });
     };
@@ -573,14 +573,15 @@ export function ComplianceItemForm({
                         )} />
                         <FormField control={form.control} name="responsibleManagerId" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Responsible person</FormLabel>
+                                <FormLabel>Responsible person (optional)</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                                     <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select personnel" />
                                         </SelectTrigger>
                                     </FormControl>
-                                <SelectContent>
+                                    <SelectContent>
+                                        <SelectItem value="__unassigned__">Unassigned</SelectItem>
                                         {personnel.map((person) => (
                                             <SelectItem key={person.id} value={person.id}>
                                                 {person.firstName} {person.lastName}
@@ -615,7 +616,7 @@ export function ComplianceItemForm({
                         )} />
                         <FormField control={form.control} name="responsibleManagerId" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Responsible person</FormLabel>
+                                <FormLabel>Responsible person (optional)</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                                     <FormControl>
                                         <SelectTrigger>

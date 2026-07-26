@@ -5,10 +5,10 @@ import {
 } from '@/lib/page-format-buttons';
 
 export const HEADER_ACTION_BUTTON_CLASS =
-  "h-7 rounded-md px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]";
+  "h-7 rounded-md px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-[0_1px_2px_rgba(15,23,42,0.1)] transition-[background-color,border-color,color,box-shadow,transform] duration-200 hover:-translate-y-px hover:shadow-[0_5px_14px_-10px_rgba(15,23,42,0.5)] active:translate-y-0";
 
 export const HEADER_SECONDARY_BUTTON_CLASS =
-  "h-7 rounded-md border-button-secondary-border bg-button-secondary px-3 text-[9px] font-black uppercase tracking-[0.08em] text-button-secondary-foreground shadow-sm transition-transform hover:scale-[1.02] hover:bg-button-secondary-accent hover:text-button-secondary-accent-foreground active:scale-[0.98]";
+  "h-7 rounded-md border-button-secondary-border bg-button-secondary px-3 text-[9px] font-black uppercase tracking-[0.08em] text-button-secondary-foreground shadow-[0_1px_2px_rgba(15,23,42,0.1)] transition-[background-color,border-color,color,box-shadow,transform] duration-200 hover:-translate-y-px hover:bg-button-secondary-accent hover:text-button-secondary-accent-foreground hover:shadow-[0_5px_14px_-10px_rgba(15,23,42,0.5)] active:translate-y-0";
 
 export const HEADER_MOBILE_ACTION_BUTTON_CLASS =
   `${HEADER_ACTION_BUTTON_CLASS} ${PAGE_FORMAT_MOBILE_BUTTON_CLASS}`;
@@ -17,10 +17,10 @@ export const HEADER_TAB_LIST_CLASS =
   "bg-transparent h-auto p-0 gap-1.5 border-0 rounded-md justify-start flex min-w-max flex-nowrap shadow-none";
 
 export const HEADER_TAB_TRIGGER_CLASS =
-  "h-8 rounded-md px-3 text-[9px] font-medium uppercase tracking-[0.08em] transition-all shadow-none border border-input gap-1.5 shrink-0 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none";
+  "h-8 rounded-md border border-input px-3 text-[9px] font-medium uppercase tracking-[0.08em] shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-[background-color,border-color,color,box-shadow,transform] duration-200 hover:-translate-y-px hover:border-primary/40 hover:shadow-[0_5px_14px_-10px_rgba(15,23,42,0.38)] gap-1.5 shrink-0 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-[0_1px_2px_rgba(15,23,42,0.06)]";
 
 export const HEADER_COMPACT_CONTROL_CLASS =
-  "h-7 rounded-md border border-input bg-background px-3 py-1 text-[9px] font-black uppercase tracking-[0.08em] shadow-none gap-1.5 shrink-0";
+  "h-7 rounded-md border border-input bg-background px-3 py-1 text-[9px] font-black uppercase tracking-[0.08em] shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-px hover:border-primary/40 hover:shadow-[0_5px_14px_-10px_rgba(15,23,42,0.34)] gap-1.5 shrink-0";
 
 export const HEADER_VIEW_SWITCHER_CLASS =
   "h-7 rounded-md border-button-secondary-border bg-button-secondary px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.08em] text-button-secondary-foreground shadow-none transition-colors hover:bg-button-secondary-accent hover:text-button-secondary-accent-foreground";
@@ -29,13 +29,17 @@ export const HEADER_VIEW_SWITCHER_ACTIVE_CLASS =
   "border-button-primary-border bg-button-primary text-button-primary-foreground hover:bg-button-primary-accent hover:text-button-primary-accent-foreground";
 
 export const CARD_HEADER_BAND_CLASS =
-  "min-h-[38px] shrink-0 border-b border-card-border bg-[hsl(var(--card-header-band-background))] px-2 py-1 text-[hsl(var(--card-header-band-foreground))] md:px-3";
+  "min-h-[38px] shrink-0 border-b border-card-border/80 bg-[hsl(var(--card-header-band-background))] px-2 py-1 text-[hsl(var(--card-header-band-foreground))] shadow-[inset_0_-1px_0_hsl(var(--card-border)/0.18)] md:px-3";
+
+// Use this for rows that contain compact controls rather than multi-line content.
+export const CARD_HEADER_CONTROL_BAND_CLASS =
+  "min-h-10 shrink-0 border-b border-card-border/80 bg-[hsl(var(--card-header-band-background))] px-2 py-0 text-[hsl(var(--card-header-band-foreground))] shadow-[inset_0_-1px_0_hsl(var(--card-border)/0.18)] md:px-3";
 
 export const CARD_COMPACT_HEADER_BAND_CLASS =
-  "flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 border-b border-card-border bg-[hsl(var(--card-header-band-background))] px-4 py-0 text-[hsl(var(--card-header-band-foreground))]";
+  "flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 border-b border-card-border/80 bg-[hsl(var(--card-header-band-background))] px-4 py-0 text-[hsl(var(--card-header-band-foreground))] shadow-[inset_0_-1px_0_hsl(var(--card-border)/0.18)]";
 
 export const CARD_HEADER_TOP_ROW_CLASS =
-  "flex min-h-[34px] items-start justify-between gap-3";
+  "flex min-h-10 items-center justify-between gap-3";
 
 export const CARD_HEADER_SCOPE_ZONE_CLASS =
   "min-w-0 flex-1";
@@ -152,7 +156,7 @@ export const CardControlHeader: FC<CardControlHeaderProps> = ({
   return (
     <div className={cn("flex w-full shrink-0 flex-col", className)}>
       {hasTopRow ? (
-        <div className={CARD_HEADER_BAND_CLASS}>
+        <div className={CARD_HEADER_CONTROL_BAND_CLASS}>
           {isMobile ? (
             <div className="space-y-2">
               {resolvedMobileContext ? resolvedMobileContext : null}
@@ -192,7 +196,7 @@ export const CardControlHeader: FC<CardControlHeaderProps> = ({
       ) : null}
 
       {navigation ? (
-        <div className={CARD_HEADER_BAND_CLASS}>
+        <div className={CARD_HEADER_CONTROL_BAND_CLASS}>
           {navigation}
         </div>
       ) : null}

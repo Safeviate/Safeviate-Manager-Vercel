@@ -146,6 +146,10 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(72rem 34rem at 52% -18rem, hsl(var(--primary) / 0.1), transparent 68%),
+      linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
+    background-attachment: fixed;
     font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     font-size: var(--scale, 100%);
   }
@@ -173,7 +177,9 @@
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    box-shadow: none;
+    box-shadow:
+      inset -1px 0 0 hsl(var(--sidebar-border) / 0.55),
+      10px 0 28px -28px rgba(15, 23, 42, 0.8);
   }
 
   .bg-header {
@@ -189,6 +195,9 @@
     background-position: center;
     background-repeat: no-repeat;
     backdrop-filter: blur(20px);
+    box-shadow:
+      inset 0 -1px 0 hsl(var(--header-border) / 0.72),
+      0 10px 28px -28px rgba(15, 23, 42, 0.8);
   }
 }
 

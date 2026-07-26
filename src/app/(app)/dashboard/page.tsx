@@ -18,6 +18,7 @@ import { buildTrainingCompetencyAreas } from '@/lib/training-competencies';
 import { parseJsonResponse } from '@/lib/safe-json';
 import {
   CARD_HEADER_BAND_CLASS,
+  CARD_HEADER_CONTROL_BAND_CLASS,
   CARD_COMPACT_HEADER_BAND_CLASS,
   CARD_HEADER_SCOPE_ZONE_CLASS,
   HEADER_COMPACT_CONTROL_CLASS,
@@ -305,7 +306,7 @@ type BookingOverviewMetrics = {
   }>;
 };
 
-const DASHBOARD_SHELL_CLASS = 'dashboard-card-theme overflow-hidden rounded-lg border border-card-border bg-card shadow-none';
+const DASHBOARD_SHELL_CLASS = 'dashboard-card-theme overflow-hidden rounded-xl border border-card-border/80 bg-card shadow-[0_14px_34px_-28px_rgba(15,23,42,0.55)]';
 const DASHBOARD_TAB_HEADER_CLASS = 'sticky top-0 z-10 rounded-t-lg border-b bg-[hsl(var(--card-header-band-background))] px-4 py-2.5 text-[hsl(var(--card-header-band-foreground))]';
 const DASHBOARD_ROW_METRIC_CLASS = 'min-w-0 px-3 py-2.5';
 const DASHBOARD_ROW_STATUS_CLASS = 'min-w-0 px-3 py-2.5';
@@ -1664,7 +1665,7 @@ export default function DashboardPage() {
   return (
     <div
       className={cn(
-        'mx-auto flex h-full min-h-0 w-full max-w-[1100px] flex-col gap-6 overflow-hidden',
+        'mx-auto flex h-full min-h-0 w-full max-w-[1380px] flex-col gap-6 overflow-hidden',
         isModern && 'gap-7 px-2 md:px-1'
       )}
     >
@@ -1705,9 +1706,9 @@ export default function DashboardPage() {
         </Card>
       ) : null}
       <Card className={cn(DASHBOARD_SHELL_CLASS, 'dashboard-card-theme--expanded flex min-h-0 flex-1 flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
-        <CardHeader className={cn(CARD_HEADER_BAND_CLASS, 'sticky top-0 z-10 rounded-t-lg bg-background', isModern && 'bg-white')}>
+        <CardHeader className={cn(CARD_HEADER_BAND_CLASS, 'sticky top-0 z-10 rounded-t-xl border-b border-card-border/80 bg-gradient-to-r from-card via-card to-muted/35', isModern && 'from-white via-white to-slate-50/85')}>
           <div className={CARD_HEADER_SCOPE_ZONE_CLASS}>
-            <CardTitle className="text-sm font-black uppercase tracking-tight">Company Dashboard</CardTitle>
+            <CardTitle className="text-base font-black uppercase tracking-[0.08em]">Company Dashboard</CardTitle>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-black uppercase tracking-[0.18em] text-foreground/70">
               <span>Active: {activeTabLabel}</span>
               {activeDashboardPeriodLongLabel ? <span>Period: {activeDashboardPeriodLongLabel}</span> : null}
@@ -1717,7 +1718,13 @@ export default function DashboardPage() {
 
         <CardContent className="min-h-0 flex-1 p-0">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-col">
-            <div className={cn(CARD_HEADER_BAND_CLASS, 'bg-transparent')}>
+            <div
+              className={cn(
+                CARD_HEADER_CONTROL_BAND_CLASS,
+                'border-b border-card-border/70 bg-muted/20',
+                isMobile ? 'h-auto py-2' : 'h-10'
+              )}
+            >
               {isMobile ? (
                 <div className="flex w-full flex-col gap-2">
                   <DropdownMenu>
@@ -1792,7 +1799,7 @@ export default function DashboardPage() {
                   ) : null}
                 </div>
               ) : (
-                <div className="flex w-full flex-wrap items-center justify-between gap-3">
+                <div className="flex h-full w-full flex-wrap items-center justify-between gap-3">
                   <TabsList className={cn(HEADER_TAB_LIST_CLASS, 'border-0 bg-transparent px-0 py-0')}>
                     {tabs.map((tab) => (
                       <TabsTrigger key={tab.value} value={tab.value} className={HEADER_TAB_TRIGGER_CLASS}>
@@ -1834,19 +1841,23 @@ export default function DashboardPage() {
                 <>
                     <TabsContent value="overview" className="m-0">
                       <Card className={cn(DASHBOARD_SHELL_CLASS, isModern && 'border-slate-200/80 bg-white/95')}>
-                        <CardHeader className={cn(CARD_COMPACT_HEADER_BAND_CLASS, 'border-b')}>
+                        <CardHeader className={cn(CARD_COMPACT_HEADER_BAND_CLASS, 'border-b border-card-border/80 bg-gradient-to-r from-muted/45 to-card')}>
                           <CardTitle className="text-sm font-black uppercase tracking-tight">Company Overview</CardTitle>
                         </CardHeader>
-                        <CardContent className="grid gap-3 p-4 sm:grid-cols-2">
+                        <CardContent className="grid gap-4 p-4 sm:grid-cols-2">
                           {COMPANY_DASHBOARD_VIEW_OPTIONS.filter((option) => dashboardSettings.enabledViews.includes(option.value)).map((option) => (
                             <button
                               key={option.value}
                               type="button"
                               onClick={() => setActiveTab(option.value)}
-                              className="rounded-lg border border-card-border bg-card p-4 text-left transition-colors hover:bg-muted/50"
+                              className="group relative overflow-hidden rounded-xl border border-card-border/80 bg-gradient-to-br from-primary/[0.08] via-card to-card p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                             >
-                              <p className="text-sm font-black uppercase tracking-tight">{option.label}</p>
-                              <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+                              <span className="absolute inset-x-0 top-0 h-1 bg-primary/75" />
+                              <p className="text-sm font-black uppercase tracking-[0.08em]">{option.label}</p>
+                              <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{option.description}</p>
+                              <span className="mt-4 inline-flex text-[10px] font-black uppercase tracking-[0.16em] text-primary transition-transform duration-200 group-hover:translate-x-1">
+                                Open module -&gt;
+                              </span>
                             </button>
                           ))}
                           {dashboardSettings.enabledViews.length === 1 ? (
