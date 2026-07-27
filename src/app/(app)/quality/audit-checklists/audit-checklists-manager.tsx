@@ -29,6 +29,7 @@ export default function AuditChecklistsManager() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<QualityAuditChecklistTemplate | null>(null);
   const [templateView, setTemplateView] = useState<'active' | 'archived'>('active');
 
@@ -41,17 +42,22 @@ export default function AuditChecklistsManager() {
           fetch('/api/external-organizations', { cache: 'no-store' }),
         ]);
         const [templatesPayload, personnelPayload, deptsPayload, organizationsPayload] = await Promise.all([
-          templatesResponse.json().catch(() => ({ templates: [] })),
+          templatesResponse.json().catch(() => null),
           personnelResponse.json().catch(() => ({ personnel: [] })),
           deptsResponse.json().catch(() => ({ departments: [] })),
           organizationsResponse.json().catch(() => ({ organizations: [] })),
         ]);
+        if (!templatesResponse.ok) {
+          throw new Error(typeof templatesPayload?.error === 'string' ? templatesPayload.error : 'Unable to load audit checklist templates.');
+        }
+        setLoadError(null);
         setTemplates(Array.isArray(templatesPayload.templates) ? templatesPayload.templates : []);
         setPersonnel(Array.isArray(personnelPayload.personnel) ? personnelPayload.personnel : []);
         setDepartments(Array.isArray(deptsPayload.departments) ? deptsPayload.departments : []);
         setOrganizations(Array.isArray(organizationsPayload.organizations) ? organizationsPayload.organizations : []);
     } catch (e) {
         console.error('Failed to load audit template data', e);
+        setLoadError(e instanceof Error ? e.message : 'Unable to load audit checklist templates.');
     } finally {
         setIsLoading(false);
     }
@@ -115,6 +121,7 @@ export default function AuditChecklistsManager() {
             />
           }
         />
+        {loadError ? <div className="mx-4 mt-4 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive" role="alert">{loadError}</div> : null}
         <NewChecklistDialog
           tenantId={tenantId || ''}
           departments={departments || []}

@@ -10,7 +10,7 @@ async function getTenantId(request: Request) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
   if (!email) return null;
-  return (await getTenantIdFromSession(request)) || session?.user?.tenantId?.trim() || null;
+  return getTenantIdFromSession(request);
 }
 
 async function getConfig(tenantId: string) {
@@ -24,15 +24,15 @@ async function getConfig(tenantId: string) {
 export async function GET(request: Request) {
   try {
     const tenantId = await getTenantId(request);
-    if (!tenantId) return NextResponse.json({ templates: [] }, { status: 200 });
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const config = await getConfig(tenantId);
     const archived = new URL(request.url).searchParams.get('view') === 'archived';
     const key = archived ? 'archived-quality-audit-templates' : 'quality-audit-templates';
     const templates = Array.isArray(config[key]) ? config[key] : [];
     return NextResponse.json({ templates }, { status: 200 });
   } catch (error) {
-    console.error('[quality-audit-templates] fallback to empty list:', error);
-    return NextResponse.json({ templates: [] }, { status: 200 });
+    console.error('[quality-audit-templates] failed to load tenant templates:', error);
+    return NextResponse.json({ error: 'Unable to load audit checklist templates.' }, { status: 500 });
   }
 }
 

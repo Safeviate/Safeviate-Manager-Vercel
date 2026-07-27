@@ -44,7 +44,9 @@ async function getTenantId(request: Request) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
   if (!email) return null;
-  return (await getTenantIdFromSession(request)) || session?.user?.tenantId?.trim() || null;
+  // Tenant ownership is resolved from the current tenant record (or an
+  // authorized master-tenant override), never from a stale session claim.
+  return getTenantIdFromSession(request);
 }
 
 async function getConfig(tenantId: string) {
@@ -169,14 +171,37 @@ async function archiveAuditSignoffAlert(tenantId: string, auditId: string) {
   );
 }
 
+type StoredAuditRow = {
+  id: string;
+  data: unknown;
+};
+
+function getStoredAudit(row: StoredAuditRow): QualityAudit | null {
+  if (!row.data || typeof row.data !== 'object' || Array.isArray(row.data)) {
+    return null;
+  }
+
+  // The table row ID is the tenant-owned audit identity. Older JSON payloads can
+  // contain an ID from before tenant scoping, so never expose that as the record ID.
+  return { ...(row.data as QualityAudit), id: row.id };
+}
+
+function getLegacyAuditId(row: StoredAuditRow) {
+  if (!row.data || typeof row.data !== 'object' || Array.isArray(row.data)) {
+    return null;
+  }
+
+  const legacyId = (row.data as { id?: unknown }).id;
+  return typeof legacyId === 'string' && legacyId.trim() ? legacyId.trim() : null;
+}
+
 async function loadAudits(tenantId: string) {
   const rows = await prisma.$queryRawUnsafe<{ id: string; data: unknown }[]>(
     `SELECT id, data FROM quality_audits WHERE tenant_id = $1 ORDER BY created_at DESC`,
     tenantId
   );
   return rows
-    .map((row) => row.data)
-    .filter((audit) => (audit as { analysisType?: string } | null)?.analysisType !== 'gap-analysis');
+    .filter((row) => (row.data as { analysisType?: string } | null)?.analysisType !== 'gap-analysis');
 }
 
 async function loadCaps(tenantId: string) {
@@ -243,7 +268,8 @@ export async function GET(request: Request) {
   let tenantId: string | null = null;
   try {
     tenantId = await getTenantId(request);
-    if (!tenantId) return NextResponse.json({ audits: [], templates: [], personnel: [], departments: [], organizations: [], aircraft: [], caps: [], findingLevels: [] }, { status: 200 });
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const requestedAuditId = new URL(request.url).searchParams.get('auditId')?.trim();
 
     const [rawAudits, caps, config, organizations, aircraft, persistedPersonnel] = await Promise.all([
       loadAudits(tenantId),
@@ -258,7 +284,10 @@ export async function GET(request: Request) {
       persistedPersonnel.length > 0
         ? persistedPersonnel
         : configPersonnel;
-    const audits = rawAudits.map((audit) => normalizeAuditIdentity(audit as QualityAudit, personnel));
+    const audits = rawAudits
+      .map(getStoredAudit)
+      .filter((audit): audit is QualityAudit => audit !== null)
+      .map((audit) => normalizeAuditIdentity(audit, personnel));
     await recordSimulationRouteMetric({
       tenantId,
       routeKey: 'quality-audits.GET',
@@ -266,7 +295,7 @@ export async function GET(request: Request) {
       writes: 0,
       durationMs: Date.now() - startedAt,
     });
-    return NextResponse.json({
+    const payload = {
       audits,
       caps,
       templates: Array.isArray(config['quality-audit-templates']) ? config['quality-audit-templates'] : [],
@@ -279,9 +308,21 @@ export async function GET(request: Request) {
         : Array.isArray(config['finding-levels-settings']?.levels)
           ? config['finding-levels-settings'].levels
           : [],
-    }, { status: 200 });
+    };
+
+    if (requestedAuditId) {
+      const audit = audits.find((item) => item.id === requestedAuditId)
+        ?? rawAudits
+          .filter((row) => getLegacyAuditId(row) === requestedAuditId)
+          .map(getStoredAudit)
+          .find((item): item is QualityAudit => item !== null);
+      if (!audit) return NextResponse.json({ error: 'Audit record not found in the current tenant.' }, { status: 404 });
+      return NextResponse.json({ ...payload, audit: normalizeAuditIdentity(audit, personnel) }, { status: 200 });
+    }
+
+    return NextResponse.json(payload, { status: 200 });
   } catch (error) {
-    console.error('[quality-audits] fallback to empty payload:', error);
+    console.error('[quality-audits] failed to load tenant audit data:', error);
     await recordSimulationRouteMetric({
       tenantId,
       routeKey: 'quality-audits.GET',
@@ -290,7 +331,7 @@ export async function GET(request: Request) {
       durationMs: Date.now() - startedAt,
       isError: true,
     });
-    return NextResponse.json({ audits: [], templates: [], personnel: [], departments: [], organizations: [], aircraft: [], caps: [], findingLevels: [] }, { status: 200 });
+    return NextResponse.json({ error: 'Unable to load audit data for the current tenant.' }, { status: 500 });
   }
 }
 

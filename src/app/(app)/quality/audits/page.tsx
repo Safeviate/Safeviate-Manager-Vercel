@@ -222,19 +222,25 @@ export default function AuditsPage() {
     const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
     const [aircraft, setAircraft] = useState<Aircraft[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const currentUserIdentityLabel = userProfile?.email?.trim() || userProfile?.id || '';
 
     const loadData = async () => {
         try {
             const response = await fetch('/api/quality-audits', { cache: 'no-store' });
-            const payload = await response.json().catch(() => ({ audits: [], personnel: [], departments: [], organizations: [], aircraft: [] }));
+            const payload = await response.json().catch(() => null);
+            if (!response.ok) {
+                throw new Error(payload?.error || 'Unable to load tenant audit data.');
+            }
             setAudits(Array.isArray(payload.audits) ? payload.audits : []);
             setPersonnel(Array.isArray(payload.personnel) ? payload.personnel : []);
             setDepartments(Array.isArray(payload.departments) ? payload.departments : []);
             setOrganizations(Array.isArray(payload.organizations) ? payload.organizations : []);
             setAircraft(Array.isArray(payload.aircraft) ? payload.aircraft : []);
+            setLoadError(null);
         } catch (e) {
             console.error('Failed to load quality data', e);
+            setLoadError(e instanceof Error ? e.message : 'Unable to load tenant audit data.');
         } finally {
             setIsLoading(false);
         }
@@ -437,6 +443,11 @@ export default function AuditsPage() {
                     </div>
                 </div>
                 <CardContent className={cn("flex-1 min-h-0 p-0 bg-muted/5", isMobile ? "overflow-y-auto" : "overflow-y-auto")}>
+                    {loadError ? (
+                        <div role="alert" className="mx-4 mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                            {loadError}
+                        </div>
+                    ) : null}
                     {!showTabs || !showOrgTabs ? (
                         renderOrgContent(scopedOrganizationId)
                     ) : (

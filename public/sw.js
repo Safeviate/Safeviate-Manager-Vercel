@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const STATIC_CACHE = `safeviate-static-${CACHE_VERSION}`;
 const DATA_CACHE = `safeviate-data-${CACHE_VERSION}`;
 const NAV_CACHE = `safeviate-nav-${CACHE_VERSION}`;
@@ -12,40 +12,6 @@ const isNavigationRequest = (request) => request.mode === 'navigate' || request.
 const isDataRequest = (request) => request.url.includes('/api/');
 const isAuthRequest = (request) => request.url.includes('/api/auth/');
 const isTileRequest = (request) => request.url.includes('tile.openstreetmap.org');
-const API_FALLBACKS = [
-  {
-    match: '/api/dashboard-summary',
-    body: {
-      overview: null,
-      quickReads: null,
-      alerts: [],
-      fleetMetrics: null,
-      instructorSnapshot: null,
-      studentSnapshot: null,
-      safetySnapshot: null,
-      qualitySnapshot: null,
-    },
-  },
-  {
-    match: '/api/quality-audits',
-    body: {
-      audits: [],
-      scheduledAudits: [],
-    },
-  },
-  {
-    match: '/api/corrective-action-plans',
-    body: [],
-  },
-  {
-    match: '/api/safety-reports',
-    body: [],
-  },
-  {
-    match: '/api/quick-safety-reports',
-    body: [],
-  },
-];
 
 const cacheResponse = async (cacheName, request, response) => {
   if (!response) return response;
@@ -66,29 +32,16 @@ const trimCache = async (cacheName, maxEntries) => {
   }
 };
 
-const buildOfflineJsonResponse = (request) => {
-  const matchedFallback = API_FALLBACKS.find((fallback) => request.url.includes(fallback.match));
-  if (!matchedFallback) {
-    return new Response(
-      JSON.stringify({
-        error: 'offline',
-        message: 'This data is not available offline yet.',
-      }),
-      {
-        headers: { 'Content-Type': 'application/json' },
-        status: 503,
-      }
-    );
-  }
-
-  return new Response(JSON.stringify(matchedFallback.body), {
+const buildOfflineJsonResponse = () =>
+  new Response(JSON.stringify({
+    error: 'offline',
+    message: 'This tenant data is not available while offline.',
+  }), {
     headers: {
       'Content-Type': 'application/json',
-      'X-Safeviate-Offline': 'true',
     },
-    status: 200,
+    status: 503,
   });
-};
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -140,12 +93,7 @@ self.addEventListener('fetch', (event) => {
   if (isDataRequest(request)) {
     event.respondWith(
       fetch(request)
-        .then((response) => cacheResponse(DATA_CACHE, request, response))
-        .catch(async () => {
-          const cached = await caches.match(request);
-          if (cached) return cached;
-          return buildOfflineJsonResponse(request);
-        })
+        .catch(() => buildOfflineJsonResponse())
     );
     return;
   }

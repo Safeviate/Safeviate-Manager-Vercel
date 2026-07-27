@@ -46,7 +46,7 @@ async function getSessionContext(request: Request): Promise<SessionContext> {
   const denied = { tenantId: null, actorUserId, actorEmail, canCreate: false, canEdit: false, canArchive: false, canApprove: false };
   if (!actorEmail) return denied;
 
-  const tenantId = (await getTenantIdFromSession(request)) || session?.user?.tenantId?.trim() || null;
+  const tenantId = await getTenantIdFromSession(request);
   if (!tenantId) return denied;
 
   // Full access is scoped to the currently selected tenant; it does not read another tenant's schedule.
@@ -352,7 +352,7 @@ export async function GET(request: Request) {
   try {
     const context = await getSessionContext(request);
     const { tenantId } = context;
-    if (!tenantId) return NextResponse.json({ areas: [], items: [], archivedAreas: [], archivedItems: [], revision: 1 });
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const config = await getConfig(tenantId);
     const requests = toChangeRequests(config['audit-schedule-change-requests']);
     return NextResponse.json({
@@ -364,8 +364,8 @@ export async function GET(request: Request) {
       pendingChanges: context.canApprove ? requests.filter((change) => change.status === 'pending') : [],
     });
   } catch (error) {
-    console.error('[audit-schedule] returning empty tenant schedule:', error);
-    return NextResponse.json({ areas: [], items: [], archivedAreas: [], archivedItems: [], revision: 1 });
+    console.error('[audit-schedule] failed to load tenant schedule:', error);
+    return NextResponse.json({ error: 'Unable to load the audit schedule.' }, { status: 500 });
   }
 }
 

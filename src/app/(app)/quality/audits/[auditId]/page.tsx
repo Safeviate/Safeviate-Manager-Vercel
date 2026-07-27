@@ -56,22 +56,24 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isStartingAudit, setIsStartingAudit] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
-        const response = await fetch('/api/quality-audits', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({
-          audits: [],
-          templates: [],
-          caps: [],
-          personnel: [],
-          organizations: [],
-          aircraft: [],
-          findingLevels: [],
-        }));
-        const foundAudit = (payload.audits as QualityAudit[] | undefined)?.find((item) => item.id === auditId);
+        const response = await fetch(`/api/quality-audits?auditId=${encodeURIComponent(auditId)}`, { cache: 'no-store' });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Unable to load this audit for the current tenant.');
+        }
+        // The list and detail responses share the same tenant-scoped data set.
+        // Fall back to that collection so a visible audit can always be opened,
+        // even if an intermediary omits the optional single-audit field.
+        const foundAudit = (payload?.audit as QualityAudit | undefined)
+          ?? (Array.isArray(payload?.audits)
+            ? (payload.audits as QualityAudit[]).find((item) => item.id === auditId)
+            : undefined);
         if (!cancelled && foundAudit) {
           setAudit(foundAudit);
           setTemplate((payload.templates as QualityAuditChecklistTemplate[] | undefined)?.find((item) => item.id === foundAudit.templateId) || null);
@@ -82,9 +84,15 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
           setOrganizations(Array.isArray(payload.organizations) ? payload.organizations : []);
           setAircraft(Array.isArray(payload.aircraft) ? payload.aircraft : []);
           setFindingLevelsSettings(Array.isArray(payload.findingLevels) ? payload.findingLevels : null);
+          if (!foundAudit) {
+            setLoadError('Audit record not found in the current tenant.');
+          } else {
+            setLoadError(null);
+          }
         }
       } catch (error) {
         console.error('Failed to load audit details', error);
+        if (!cancelled) setLoadError(error instanceof Error ? error.message : 'Unable to load this audit.');
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -94,7 +102,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [auditId]);
+  }, [auditId, tenantId]);
 
   useEffect(() => {
     if (!isLoading && audit && userProfile) {
@@ -166,7 +174,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
   if (!audit || !enrichedAudit) {
     return (
       <div className="max-w-[1100px] mx-auto w-full text-center py-20 px-1">
-        <p className="text-muted-foreground mb-4">Audit record not found.</p>
+        <p className="text-muted-foreground mb-4">{loadError || 'Audit record not found.'}</p>
         <BackNavButton href="/quality/audits" text="Back to Audits" />
       </div>
     );

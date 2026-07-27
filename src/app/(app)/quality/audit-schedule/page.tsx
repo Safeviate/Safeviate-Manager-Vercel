@@ -230,6 +230,7 @@ export default function AuditSchedulePage() {
   const [isArchivedOpen, setIsArchivedOpen] = useState(false);
   const [isChangesOpen, setIsChangesOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isAddAreaOpen, setIsAddAreaOpen] = useState(false);
   const [newAreaName, setNewAreaName] = useState('');
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
@@ -238,7 +239,11 @@ export default function AuditSchedulePage() {
     setIsLoading(true);
     try {
         const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({ areas: [], items: [], archivedAreas: [], archivedItems: [] }));
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(typeof payload?.error === 'string' ? payload.error : 'Unable to load the audit schedule.');
+        }
+        setLoadError(null);
         if (Array.isArray(payload.areas)) setAuditAreas(payload.areas);
         if (Array.isArray(payload.items)) setSchedule((payload.items as AuditScheduleItem[]).filter(i => i.year === currentYear));
         if (Array.isArray(payload.archivedAreas)) setArchivedAreas(payload.archivedAreas);
@@ -247,6 +252,7 @@ export default function AuditSchedulePage() {
         if (Array.isArray(payload.pendingChanges)) setPendingChanges(payload.pendingChanges as ScheduleChangeRequest[]);
     } catch (e) {
         console.error("Failed to load audit schedule", e);
+        setLoadError(e instanceof Error ? e.message : 'Unable to load the audit schedule.');
     } finally {
         setIsLoading(false);
     }
@@ -397,6 +403,7 @@ export default function AuditSchedulePage() {
                     </div>
                 }
             />
+            {loadError ? <div className="mx-4 mt-4 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive" role="alert">{loadError}</div> : null}
             <Dialog open={isArchivedOpen} onOpenChange={setIsArchivedOpen}>
               <DialogContent>
                 <DialogHeader>
