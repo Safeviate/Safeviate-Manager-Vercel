@@ -53,6 +53,15 @@ function toMonthLabel(dateLike) {
   return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getUTCMonth()] ?? null;
 }
 
+function toScheduleStatus(value) {
+  const status = normalizeTitle(value).toLowerCase();
+
+  if (['completed', 'finalized', 'archived', 'closed'].includes(status)) return 'Completed';
+  if (['pending', 'open', 'draft', 'in progress', 'in-progress'].includes(status)) return 'Pending';
+  if (status === 'not scheduled' || status === 'cancelled' || status === 'canceled') return 'Not Scheduled';
+  return 'Scheduled';
+}
+
 function sortScheduleItems(items) {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return [...items].sort((a, b) => {
@@ -119,10 +128,21 @@ async function main() {
       existingAreas.filter((value) => typeof value === 'string' && value.trim()).map((value) => value.trim())
     );
 
-    const scheduleItemsByKey = new Map();
+    const legacyAuditScheduleItemIds = new Set(
+      auditRows.map((row) => {
+        const data = row.data || {};
+        const auditDate = data.auditDate || row.created_at;
+        return `${row.id}:${toMonthLabel(auditDate)}`;
+      })
+    );
+
+    const scheduleItemsById = new Map();
     for (const item of existingItems) {
       if (!item?.area || !item?.month || !item?.year) continue;
-      scheduleItemsByKey.set(`${item.area}::${item.month}::${item.year}`, item);
+      const id = normalizeTitle(item.id) || `manual:${item.area}:${item.month}:${item.year}`;
+      // Earlier recovery runs used auditId:month. Recreate those as canonical audit entries below.
+      if (legacyAuditScheduleItemIds.has(id)) continue;
+      scheduleItemsById.set(id, { ...item, id });
     }
 
     for (const row of auditRows) {
@@ -145,16 +165,17 @@ async function main() {
       const month = toMonthLabel(auditDate);
       const date = new Date(auditDate);
       const year = Number.isNaN(date.getTime()) ? new Date(row.created_at).getUTCFullYear() : date.getUTCFullYear();
-      const status = typeof data.status === "string" ? data.status : 'Scheduled';
-      if (title && month && year && ['Scheduled', 'Completed', 'Pending', 'Not Scheduled'].includes(status)) {
-        const key = `${title}::${month}::${year}`;
-        if (!scheduleItemsByKey.has(key)) {
-          scheduleItemsByKey.set(key, {
-            id: `${row.id}:${month}`,
+      const status = toScheduleStatus(data.status);
+      if (title && month && year) {
+        const id = `audit:${row.id}`;
+        if (!scheduleItemsById.has(id)) {
+          scheduleItemsById.set(id, {
+            id,
             area: title,
             month,
             year,
             status,
+            sourceAuditId: row.id,
           });
         }
       }
@@ -162,7 +183,7 @@ async function main() {
 
     const nextTemplates = Array.from(templateByTitle.values()).sort((a, b) => a.title.localeCompare(b.title));
     const nextAreas = Array.from(recoveredAreas).sort((a, b) => a.localeCompare(b));
-    const nextItems = sortScheduleItems(Array.from(scheduleItemsByKey.values()));
+    const nextItems = sortScheduleItems(Array.from(scheduleItemsById.values()));
 
     const summary = {
       tenantId,
@@ -173,6 +194,7 @@ async function main() {
         auditScheduleItemCount: existingItems.length,
       },
       recovered: {
+        auditRecordCount: auditRows.length,
         auditAreaCount: nextAreas.length,
         auditAreas: nextAreas,
         qualityAuditTemplateCount: nextTemplates.length,

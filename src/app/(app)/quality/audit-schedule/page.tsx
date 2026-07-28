@@ -32,6 +32,7 @@ import {
   ArchiveRestore,
   Menu,
   ClipboardCheck,
+  CalendarDays,
   Check,
   X,
 } from 'lucide-react';
@@ -229,6 +230,7 @@ export default function AuditSchedulePage() {
   const [pendingChanges, setPendingChanges] = useState<ScheduleChangeRequest[]>([]);
   const [isArchivedOpen, setIsArchivedOpen] = useState(false);
   const [isChangesOpen, setIsChangesOpen] = useState(false);
+  const [isOccurrencesOpen, setIsOccurrencesOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isAddAreaOpen, setIsAddAreaOpen] = useState(false);
@@ -365,6 +367,11 @@ export default function AuditSchedulePage() {
     return found ? found.status : 'Not Scheduled';
   };
 
+  const scheduleOccurrences = [...schedule].sort((left, right) => {
+    const monthDifference = MONTHS.indexOf(left.month) - MONTHS.indexOf(right.month);
+    return monthDifference || left.area.localeCompare(right.area);
+  });
+
   const extraLanes = ['', ''];
   const scheduleRowHeights = 'grid-rows-[56px_repeat(12,44px)]';
 
@@ -388,6 +395,9 @@ export default function AuditSchedulePage() {
                       {canDeleteAuditSchedule ? <Button variant="outline" size="sm" onClick={() => setIsArchivedOpen(true)} className={HEADER_COMPACT_CONTROL_CLASS}>
                         <ArchiveRestore className="mr-1.5 h-3.5 w-3.5" /> Archived ({archivedAreas.length})
                       </Button> : null}
+                      <Button variant="outline" size="sm" onClick={() => setIsOccurrencesOpen(true)} className={HEADER_COMPACT_CONTROL_CLASS}>
+                        <CalendarDays className="mr-1.5 h-3.5 w-3.5" /> Entries ({scheduleOccurrences.length})
+                      </Button>
                       {canCreateAuditSchedule ? <Button
                           variant={isMobile ? 'outline' : 'default'}
                           size="sm"
@@ -455,6 +465,25 @@ export default function AuditSchedulePage() {
                 </div>
               </DialogContent>
             </Dialog>
+            <Dialog open={isOccurrencesOpen} onOpenChange={setIsOccurrencesOpen}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Audit Schedule Entries</DialogTitle>
+                  <DialogDescription>All active audit schedule entries for this tenant and calendar year.</DialogDescription>
+                </DialogHeader>
+                <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
+                  {scheduleOccurrences.length ? scheduleOccurrences.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-card-border/60 bg-card px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground">{item.area}</p>
+                        <p className="text-xs text-muted-foreground">{item.month} {item.year}</p>
+                      </div>
+                      <Badge className={cn('shrink-0 border text-xs', getStatusBadgeClass(item.status))}>{item.status}</Badge>
+                    </div>
+                  )) : <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">No audit schedule entries for {currentYear}.</p>}
+                </div>
+              </DialogContent>
+            </Dialog>
             <CardContent className="flex min-h-0 flex-1 flex-col p-0">
                 <div className={cn(
                     "overscroll-contain bg-card custom-scrollbar",
@@ -507,6 +536,7 @@ export default function AuditSchedulePage() {
                                     </div>
                                     {MONTHS.map((month, idx) => {
                                         const status = getScheduleItem(area, month);
+                                        const occurrenceCount = schedule.filter((item) => item.area === area && item.month === month).length;
                                         const hasExistingItem = schedule.some((item) => item.area === area && item.month === month);
                                         const canUpdateCell = canEditAuditSchedule || (canCreateAuditSchedule && !hasExistingItem);
                                         const popoverId = `${area}-${month}`;
@@ -537,7 +567,7 @@ export default function AuditSchedulePage() {
                                                                       getStatusBadgeClass(status)
                                                                   )}
                                                               >
-                                                                  {status === 'Not Scheduled' ? '' : status}
+                                                              {status === 'Not Scheduled' ? '' : `${status}${occurrenceCount > 1 ? ` (${occurrenceCount})` : ''}`}
                                                               </Badge>
                                                           </button>
                                                       </PopoverTrigger>
@@ -554,7 +584,7 @@ export default function AuditSchedulePage() {
                                                       getStatusBadgeClass(status)
                                                     )}
                                                   >
-                                                    {status === 'Not Scheduled' ? '' : status}
+                                                    {status === 'Not Scheduled' ? '' : `${status}${occurrenceCount > 1 ? ` (${occurrenceCount})` : ''}`}
                                                   </Badge>
                                                 )}
                                             </div>
