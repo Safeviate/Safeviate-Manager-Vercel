@@ -1,59 +1,22 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { canEditSafetyReportsForTenant } from '@/lib/server/safety-report-permissions';
 import { getTenantIdForRoute } from '@/lib/server/session-tenant';
 import { sendSafetyActionEscalationEmail } from '@/lib/server/mail';
-import { isMasterTenantEmail } from '@/lib/server/tenant-access';
 import type { SafetyReport } from '@/types/safety-report';
-import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 
 const ESCALATION_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-
-function mergePermissions(rolePermissions: unknown, userPermissions: unknown) {
-  const permissions = new Set<string>();
-  const denied = new Set<string>();
-  for (const source of [rolePermissions, userPermissions]) {
-    if (!Array.isArray(source)) continue;
-    for (const entry of source) {
-      if (typeof entry !== 'string') continue;
-      const value = entry.trim();
-      if (!value) continue;
-      if (value.startsWith('!')) denied.add(value.slice(1));
-      else permissions.add(value);
-    }
-  }
-  for (const permission of denied) permissions.delete(permission);
-  return permissions;
-}
-
-async function canEscalateSafetyActions(tenantId: string) {
-  const session = await getServerSession(authOptions);
-  const email = session?.user?.email?.trim().toLowerCase();
-  if (!email) return { allowed: false as const, session };
-  if (isMasterTenantEmail(email)) return { allowed: true as const, session };
-
-  const personnel = await prisma.personnel.findFirst({
-    where: { tenantId, email: { equals: email, mode: 'insensitive' } },
-    select: { role: true, permissions: true },
-  });
-  if (!personnel) return { allowed: false as const, session };
-
-  const role = personnel.role?.trim();
-  const roleRecord = role
-    ? await prisma.role.findFirst({ where: { tenantId, OR: [{ id: role }, { name: role }] }, select: { permissions: true } })
-    : null;
-  const permissions = mergePermissions(roleRecord?.permissions, personnel.permissions);
-  return { allowed: permissions.has('*') || permissions.has('safety-reports-edit'), session };
-}
 
 export async function POST(request: Request, context: { params: Promise<{ reportId: string; actionId: string }> }) {
   const tenantId = await getTenantIdForRoute(request);
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const authorization = await canEscalateSafetyActions(tenantId);
-  if (!authorization.allowed) {
+  if (!(await canEditSafetyReportsForTenant(tenantId))) {
     return NextResponse.json({ error: 'You do not have permission to escalate safety actions for this tenant.' }, { status: 403 });
   }
+  const session = await getServerSession(authOptions);
 
   const { reportId, actionId } = await context.params;
   const rows = await prisma.$queryRawUnsafe<{ data: unknown; tenant_id: string }[]>(
@@ -104,7 +67,7 @@ export async function POST(request: Request, context: { params: Promise<{ report
   }
 
   const now = new Date().toISOString();
-  const actor = authorization.session?.user;
+  const actor = session?.user;
   const nextReport: SafetyReport = {
     ...report,
     correctiveActions: (report.correctiveActions || []).map((item) => item.id === actionId ? {

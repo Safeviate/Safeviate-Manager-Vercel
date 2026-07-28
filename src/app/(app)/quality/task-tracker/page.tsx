@@ -105,7 +105,7 @@ export default function TaskTrackerPage() {
   const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const offlineUrls = useMemo(
-    () => ['/quality/task-tracker', '/api/dashboard-summary', '/api/external-organizations'],
+    () => ['/quality/task-tracker', '/api/dashboard-summary', '/api/external-organizations', '/api/users'],
     []
   );
   const isCurrentTenantRecord = (record: { tenantId?: string | null } | null | undefined) => record?.tenantId === tenantId;
@@ -113,19 +113,23 @@ export default function TaskTrackerPage() {
     setIsLoading(true);
     void (async () => {
       try {
-        const [summaryRes, orgsRes] = await Promise.all([
+        const [summaryRes, orgsRes, usersRes] = await Promise.all([
           fetch('/api/dashboard-summary', { cache: 'no-store' }),
           fetch('/api/external-organizations', { cache: 'no-store' }),
+          fetch('/api/users', { cache: 'no-store' }),
         ]);
-        const summary = await summaryRes.json().catch(() => ({}));
-        const orgsPayload = await orgsRes.json().catch(() => ({}));
+        const [summary, orgsPayload, usersPayload] = await Promise.all([
+          summaryRes.json().catch(() => ({})),
+          orgsRes.json().catch(() => ({})),
+          usersRes.json().catch(() => ({})),
+        ]);
 
         setMocs(Array.isArray(summary.mocs) ? summary.mocs.filter(isCurrentTenantRecord) : []);
         setSafetyReports(Array.isArray(summary.reports) ? summary.reports.filter(isCurrentTenantRecord) : []);
         setCaps(Array.isArray(summary.caps) ? summary.caps.filter(isCurrentTenantRecord) : []);
         setAudits(Array.isArray(summary.audits) ? summary.audits.filter(isCurrentTenantRecord) : []);
         setAircraft(Array.isArray(summary.aircrafts) ? summary.aircrafts : []);
-        setPersonnel(Array.isArray(summary.personnel) ? summary.personnel : []);
+        setPersonnel(Array.isArray(usersPayload.personnel) ? usersPayload.personnel : []);
         setOrganizations(Array.isArray(orgsPayload.organizations) ? orgsPayload.organizations : []);
       } catch (e) {
         console.error('Failed to load task data', e);

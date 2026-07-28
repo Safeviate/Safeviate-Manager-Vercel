@@ -1,9 +1,9 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { canEditSafetyReportsForTenant } from '@/lib/server/safety-report-permissions';
 import { getTenantIdForRoute } from '@/lib/server/session-tenant';
-import { isMasterTenantEmail } from '@/lib/server/tenant-access';
-import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import type { SafetyReport } from '@/types/safety-report';
 
 function toStableJson(value: unknown) {
@@ -12,48 +12,6 @@ function toStableJson(value: unknown) {
 
 async function getTenantId(request: Request) {
   return getTenantIdForRoute(request);
-}
-
-function mergePermissions(rolePermissions: unknown, userPermissions: unknown) {
-  const permissions = new Set<string>();
-  const denied = new Set<string>();
-  for (const source of [rolePermissions, userPermissions]) {
-    if (!Array.isArray(source)) continue;
-    for (const entry of source) {
-      if (typeof entry !== 'string') continue;
-      const value = entry.trim();
-      if (!value) continue;
-      if (value.startsWith('!')) denied.add(value.slice(1));
-      else permissions.add(value);
-    }
-  }
-  for (const permission of denied) permissions.delete(permission);
-  return permissions;
-}
-
-async function canEditSafetyReports(request: Request, tenantId: string) {
-  const session = await getServerSession(authOptions);
-  const email = session?.user?.email?.trim().toLowerCase();
-  if (!email) return false;
-
-  // The Safeviate master account must retain full tenant-wide access.
-  if (isMasterTenantEmail(email)) return true;
-
-  const personnel = await prisma.personnel.findFirst({
-    where: { tenantId, email: { equals: email, mode: 'insensitive' } },
-    select: { role: true, permissions: true },
-  });
-  if (!personnel) return false;
-
-  const role = personnel.role?.trim();
-  const roleRecord = role
-    ? await prisma.role.findFirst({
-      where: { tenantId, OR: [{ id: role }, { name: role }] },
-      select: { permissions: true },
-    })
-    : null;
-  const permissions = mergePermissions(roleRecord?.permissions, personnel.permissions);
-  return permissions.has('*') || permissions.has('safety-reports-edit');
 }
 
 function validateLifecycleUpdate(existingReport: SafetyReport, report: SafetyReport) {
@@ -124,7 +82,7 @@ function validateLifecycleUpdate(existingReport: SafetyReport, report: SafetyRep
 export async function PUT(request: Request, context: { params: Promise<{ reportId: string }> }) {
   const tenantId = await getTenantId(request);
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!(await canEditSafetyReports(request, tenantId))) {
+  if (!(await canEditSafetyReportsForTenant(tenantId))) {
     return NextResponse.json({ error: 'You do not have permission to edit safety reports for this tenant.' }, { status: 403 });
   }
   const session = await getServerSession(authOptions);
@@ -188,7 +146,7 @@ export async function PUT(request: Request, context: { params: Promise<{ reportI
 export async function PATCH(request: Request, context: { params: Promise<{ reportId: string }> }) {
   const tenantId = await getTenantId(request);
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!(await canEditSafetyReports(request, tenantId))) {
+  if (!(await canEditSafetyReportsForTenant(tenantId))) {
     return NextResponse.json({ error: 'You do not have permission to edit safety reports for this tenant.' }, { status: 403 });
   }
 

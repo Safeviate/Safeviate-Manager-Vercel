@@ -579,7 +579,7 @@ export default function SafetyReportsPage() {
   const [reportSortOrder, setReportSortOrder] = useState<ReportSortOrder>('newest');
   const [reportView, setReportView] = useState<'active' | 'archived'>('active');
 
-  const canManageAll = hasPermission('safety-reports-edit');
+  const canManageAll = hasPermission('safety-reports-edit') || hasPermission('admin-view');
   function isCurrentTenantRecord(record: { tenantId?: string | null }) {
     return record.tenantId === tenantId;
   }

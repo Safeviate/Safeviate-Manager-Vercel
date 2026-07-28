@@ -76,7 +76,7 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
   const detailSearch = searchParams?.toString() || '';
   const currentRoute = `${pathname || `/quality/task-tracker/${resolvedParams.capId}`}${detailSearch ? `?${detailSearch}` : ''}`;
   const offlineUrls = useMemo(
-    () => [currentRoute, '/quality/task-tracker', '/api/dashboard-summary'],
+    () => [currentRoute, '/quality/task-tracker', '/api/dashboard-summary', '/api/users'],
     [currentRoute]
   );
 
@@ -85,12 +85,18 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
     const load = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
-        const summary = await response.json().catch(() => ({}));
+        const [summaryResponse, usersResponse] = await Promise.all([
+          fetch('/api/dashboard-summary', { cache: 'no-store' }),
+          fetch('/api/users', { cache: 'no-store' }),
+        ]);
+        const [summary, usersPayload] = await Promise.all([
+          summaryResponse.json().catch(() => ({})),
+          usersResponse.json().catch(() => ({})),
+        ]);
         if (cancelled) return;
         setCaps(Array.isArray(summary.caps) ? summary.caps.filter((item: CorrectiveActionPlan) => item?.tenantId === tenantId) : []);
         setAudits(Array.isArray(summary.audits) ? summary.audits.filter((item: QualityAudit) => item?.tenantId === tenantId) : []);
-        setPersonnel(Array.isArray(summary.personnel) ? summary.personnel : []);
+        setPersonnel(Array.isArray(usersPayload.personnel) ? usersPayload.personnel : []);
       } catch (error) {
         console.error('Failed to load CAP task detail', error);
       } finally {
