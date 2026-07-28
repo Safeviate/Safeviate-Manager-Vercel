@@ -22,6 +22,7 @@ import type { Personnel } from '@/app/(app)/users/personnel/page';
 import type { RiskMatrixSettings } from '@/types/risk';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { Badge } from '@/components/ui/badge';
 import { EditReportDialog } from '../edit-report-dialog';
 import { cn } from '@/lib/utils';
@@ -74,6 +75,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { userProfile, tenantId } = useUserProfile();
+  const { tenant } = useTenantConfig();
   const { isPageEnabled, isSectionEnabled, isTabEnabled } = usePageLayout('safety-reports');
   const resolvedParams = use(params);
   const reportId = resolvedParams.reportId;
@@ -860,7 +862,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
         <div className="hidden print:block max-w-[1100px] mx-auto w-full">
           <Card className="shadow-none border-none">
             <CardHeader className="p-0 pb-4">
-              <CardTitle className="text-2xl">Initial Safety Report {report.reportNumber}</CardTitle>
+              <CardTitle className="text-2xl">{tenant?.name || 'Safeviate'} - Initial Safety Report {report.reportNumber}</CardTitle>
               <CardDescription>Filed on {format(new Date(report.submittedAt), 'PPP')} by {reporterLabel}</CardDescription>
             </CardHeader>
           </Card>
