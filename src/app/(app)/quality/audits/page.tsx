@@ -168,7 +168,7 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
                     </div>
                     <div className="divide-y">
                         {groupAudits.sort((a, b) => b.auditDate.localeCompare(a.auditDate)).map((audit) => (
-                            <div key={audit.id} className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(200px,1.5fr)_minmax(100px,0.9fr)_minmax(90px,0.75fr)_minmax(110px,0.9fr)_minmax(60px,0.55fr)_112px] md:items-center lg:grid-cols-[minmax(200px,1.5fr)_minmax(120px,0.9fr)_minmax(110px,0.75fr)_minmax(120px,0.9fr)_minmax(72px,0.55fr)_112px]">
+                            <div key={audit.id} className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(180px,1.4fr)_minmax(96px,0.8fr)_minmax(88px,0.7fr)_minmax(104px,0.8fr)_minmax(76px,0.55fr)_minmax(60px,0.45fr)_112px] md:items-center lg:grid-cols-[minmax(200px,1.4fr)_minmax(112px,0.8fr)_minmax(100px,0.7fr)_minmax(112px,0.8fr)_minmax(88px,0.55fr)_minmax(68px,0.45fr)_112px]">
                                 <div className="min-w-0">
                                     <div className="flex flex-wrap items-center gap-2">
                                         <Link href={`/quality/audits/${audit.id}`} className="text-sm font-black uppercase text-foreground hover:underline">{audit.auditNumber}</Link>
@@ -188,6 +188,21 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
                                 <div className="min-w-0 text-xs">
                                     <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Auditor</span>
                                     <span className="block truncate font-semibold">{audit.auditorName || '-'}</span>
+                                </div>
+                                <div className="min-w-0 text-xs">
+                                    <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Score</span>
+                                    <span className={cn(
+                                        'block truncate font-black',
+                                        typeof audit.complianceScore === 'number'
+                                            ? audit.complianceScore >= 80
+                                                ? 'text-emerald-700'
+                                                : audit.complianceScore >= 60
+                                                    ? 'text-amber-700'
+                                                    : 'text-red-700'
+                                            : 'font-semibold text-muted-foreground'
+                                    )}>
+                                        {typeof audit.complianceScore === 'number' ? `${Math.round(audit.complianceScore)}%` : 'Not scored'}
+                                    </span>
                                 </div>
                                 <div className="min-w-0 text-xs">
                                     <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Asset</span>
