@@ -86,6 +86,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   const [isLoadingReport, setIsLoadingReport] = useState(true);
   const [isLoadingPersonnel, setIsLoadingPersonnel] = useState(true);
   const [isLoadingRiskMatrix, setIsLoadingRiskMatrix] = useState(true);
+  const [isPrintingInitialReport, setIsPrintingInitialReport] = useState(false);
   const [activeTab, setActiveTab] = useState('triage');
   const showReportViews = isSectionEnabled('report-views');
   const requestedTab = searchParams?.get('tab');
@@ -178,8 +179,20 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   };
 
   const handlePrint = () => {
+    setIsPrintingInitialReport(false);
     window.print();
   };
+
+  const handlePrintInitialReport = () => {
+    setIsPrintingInitialReport(true);
+    requestAnimationFrame(() => window.print());
+  };
+
+  useEffect(() => {
+    const resetPrintMode = () => setIsPrintingInitialReport(false);
+    window.addEventListener('afterprint', resetPrintMode);
+    return () => window.removeEventListener('afterprint', resetPrintMode);
+  }, []);
 
   const handleRelatedReportChange = async (relatedReportId: string, action: 'link' | 'unlink') => {
     const response = await fetch(`/api/safety-reports/${reportId}`, {
@@ -475,6 +488,34 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
     );
   };
 
+  const renderInitialReport = () => {
+    const hazards = report.initialHazards || [];
+    const risks = hazards.flatMap((hazard) => (hazard.risks || []).map((risk) => ({ hazard, risk })));
+    const initialNarrative = getInitialNarrative(report.description, report.immediateAction);
+
+    return (
+      <div className="space-y-4 p-4 md:p-6">
+        <section className="overflow-hidden rounded-lg border">
+          <div className={CARD_COMPACT_HEADER_BAND_CLASS}><h2 className="text-sm font-black uppercase tracking-wide">Report Summary</h2></div>
+          <div className="grid gap-x-6 gap-y-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Status</p><p className="mt-1 text-sm font-semibold">{report.status}</p></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Classification</p><p className="mt-1 text-sm font-semibold">{report.eventClassification || 'Not classified'}</p></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Occurrence category</p><p className="mt-1 text-sm font-semibold">{report.occurrenceCategory || 'Not recorded'}</p></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Event date and time</p><p className="mt-1 text-sm font-semibold">{format(new Date(report.eventDate), 'PPP')} {report.eventTime ? `at ${report.eventTime}` : ''}</p></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Location</p><p className="mt-1 text-sm font-semibold">{report.location || 'Not recorded'}</p></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Submitted by</p><p className="mt-1 text-sm font-semibold">{reporterLabel}</p></div>
+          </div>
+          <div className="border-t px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Initial narrative</p><p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{initialNarrative || 'No narrative recorded.'}</p></div>
+          {report.immediateAction ? <div className="border-t bg-amber-50/50 px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-800">Immediate action recorded</p><p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{report.immediateAction}</p></div> : null}
+        </section>
+        <section className="overflow-hidden rounded-lg border">
+          <div className={CARD_COMPACT_HEADER_BAND_CLASS}><h2 className="text-sm font-black uppercase tracking-wide">Hazards and Risk Assessment</h2><Badge variant="secondary">{risks.length} recorded</Badge></div>
+          {risks.length > 0 ? <div className="divide-y">{risks.map(({ hazard, risk }) => <div key={risk.id} className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"><div><p className="text-sm font-semibold">{risk.description}</p><p className="mt-1 text-xs text-muted-foreground">Hazard: {hazard.description}</p></div><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Initial risk: {risk.riskAssessment.riskScore}{risk.riskAssessment.riskLevel ? ` - ${risk.riskAssessment.riskLevel}` : ''}</p></div>)}</div> : <p className="px-4 py-5 text-sm text-muted-foreground">No hazards or risks have been recorded.</p>}
+        </section>
+      </div>
+    );
+  };
+
   const renderSingleTabContent = (tabValue: string) => {
     switch (tabValue) {
       case 'full':
@@ -615,6 +656,10 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                     <Printer className="h-3.5 w-3.5" />
                     Print report
                   </Button>
+                  <Button type="button" variant="outline" size="sm" className={`${HEADER_SECONDARY_BUTTON_CLASS} !h-8 !gap-1.5 !px-3 !py-1.5 !text-[9px]`} onClick={handlePrintInitialReport}>
+                    <Printer className="h-3.5 w-3.5" />
+                    Print initial report
+                  </Button>
                   <span className="h-5 w-px bg-slate-200" aria-hidden="true" />
                   <Button type="button" variant="outline" size="sm" className={`${HEADER_VIEW_SWITCHER_CLASS} ${activeTab === 'full' ? HEADER_VIEW_SWITCHER_ACTIVE_CLASS : ''}`} style={{ height: 24, minHeight: 24 }} onClick={() => setActiveTab('full')}>Full report</Button>
                   <Button type="button" variant="outline" size="sm" className={`${HEADER_VIEW_SWITCHER_CLASS} ${activeTab === 'discussion' ? HEADER_VIEW_SWITCHER_ACTIVE_CLASS : ''}`} style={{ height: 24, minHeight: 24 }} onClick={() => setActiveTab('discussion')}>Diary{myMentionsCount > 0 ? ` (${myMentionsCount})` : ''}</Button>
@@ -680,6 +725,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                         </Dialog>
                         <DropdownMenuItem asChild><Link href={`/print/safety-reports/${report.id}`}><FileText className="mr-2 h-4 w-4" />Open document</Link></DropdownMenuItem>
                         <DropdownMenuItem onSelect={handlePrint}><Printer className="mr-2 h-4 w-4" />Print report</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={handlePrintInitialReport}><Printer className="mr-2 h-4 w-4" />Print initial report</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -784,7 +830,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
       </Tabs>
 
       {/* --- Dedicated Print Layout (Hidden in UI) --- */}
-      <div className="hidden print:block space-y-8 max-w-[1100px] mx-auto w-full">
+      {!isPrintingInitialReport ? <div className="hidden print:block space-y-8 max-w-[1100px] mx-auto w-full">
           <Card className="shadow-none border-none">
             <CardHeader className="p-0 pb-4">
                 <CardTitle className="text-2xl">Safety Report {report.reportNumber}</CardTitle>
@@ -809,7 +855,18 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
               <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} isStacked onReportSaved={handleReportSaved} />
               <FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} isStacked onReportSaved={handleReportSaved} />
           </div>
-      </div>
+      </div> : null}
+      {isPrintingInitialReport ? (
+        <div className="hidden print:block max-w-[1100px] mx-auto w-full">
+          <Card className="shadow-none border-none">
+            <CardHeader className="p-0 pb-4">
+              <CardTitle className="text-2xl">Initial Safety Report {report.reportNumber}</CardTitle>
+              <CardDescription>Filed on {format(new Date(report.submittedAt), 'PPP')} by {reporterLabel}</CardDescription>
+            </CardHeader>
+          </Card>
+          {renderInitialReport()}
+        </div>
+      ) : null}
     </div>
   );
 }
