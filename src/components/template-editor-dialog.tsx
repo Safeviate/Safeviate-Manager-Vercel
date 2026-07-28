@@ -7,7 +7,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
+import { Button, BUTTON_HEADER_SURFACE_CLASS } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -574,7 +574,7 @@ export function TemplateEditorDialog({
                     type="button"
                     variant="outline"
                     onClick={() => appendSection({ id: crypto.randomUUID(), title: '', items: [] })}
-                    className="h-10 justify-start gap-2 border-[hsl(var(--header-button-border))] bg-[hsl(var(--header-button-background))] px-3 text-[10px] font-black uppercase shadow-none hover:bg-[hsl(var(--header-button-hover))]"
+                    className={`h-10 justify-start gap-2 px-3 text-[10px] font-black uppercase shadow-none ${BUTTON_HEADER_SURFACE_CLASS}`}
                   >
                     <PlusCircle className="h-4 w-4" />
                     Manual Creation

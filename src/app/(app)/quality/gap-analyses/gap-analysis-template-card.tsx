@@ -6,7 +6,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, BUTTON_HEADER_SURFACE_CLASS } from '@/components/ui/button';
 import { FileText, Pencil, PlayCircle, Trash2, MoreHorizontal, ChevronsUpDown } from 'lucide-react';
 import { StartGapAnalysisDialog } from './start-gap-analysis-dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -131,7 +131,7 @@ export function GapAnalysisTemplateCard({
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 w-8 shrink-0 border-[hsl(var(--header-button-border))] bg-[hsl(var(--header-button-background))] p-0 shadow-none"
+                          className={`h-8 w-8 shrink-0 p-0 shadow-none ${BUTTON_HEADER_SURFACE_CLASS}`}
                         >
                           <MoreHorizontal className="h-3.5 w-3.5" />
                         </Button>

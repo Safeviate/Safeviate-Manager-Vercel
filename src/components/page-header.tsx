@@ -1,32 +1,37 @@
 import type { FC, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import {
-  PAGE_FORMAT_MOBILE_BUTTON_CLASS,
+  BUTTON_HEADER_SURFACE_CLASS,
+  BUTTON_HEADER_SELECTED_SURFACE_CLASS,
+  BUTTON_INTERACTION_CLASS,
+} from '@/components/ui/button';
+import {
+  PAGE_FORMAT_MOBILE_HEADER_BUTTON_CLASS,
 } from '@/lib/page-format-buttons';
 
 export const HEADER_ACTION_BUTTON_CLASS =
-  "h-7 rounded-md px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-[0_1px_2px_rgba(15,23,42,0.1)] transition-[background-color,border-color,color,box-shadow,transform] duration-200 hover:-translate-y-px hover:shadow-[0_5px_14px_-10px_rgba(15,23,42,0.5)] active:translate-y-0";
+  `${BUTTON_INTERACTION_CLASS} h-7 rounded-md px-3 text-[9px] font-black uppercase tracking-[0.08em]`;
 
 export const HEADER_SECONDARY_BUTTON_CLASS =
-  "h-7 rounded-md border-button-secondary-border bg-button-secondary px-3 text-[9px] font-black uppercase tracking-[0.08em] text-button-secondary-foreground shadow-[0_1px_2px_rgba(15,23,42,0.1)] transition-[background-color,border-color,color,box-shadow,transform] duration-200 hover:-translate-y-px hover:bg-button-secondary-accent hover:text-button-secondary-accent-foreground hover:shadow-[0_5px_14px_-10px_rgba(15,23,42,0.5)] active:translate-y-0";
+  `${HEADER_ACTION_BUTTON_CLASS} ${BUTTON_HEADER_SURFACE_CLASS}`;
 
 export const HEADER_MOBILE_ACTION_BUTTON_CLASS =
-  `${HEADER_ACTION_BUTTON_CLASS} ${PAGE_FORMAT_MOBILE_BUTTON_CLASS}`;
+  `${HEADER_ACTION_BUTTON_CLASS} ${PAGE_FORMAT_MOBILE_HEADER_BUTTON_CLASS}`;
 
 export const HEADER_TAB_LIST_CLASS =
   "bg-transparent h-auto p-0 gap-1.5 border-0 rounded-md justify-start flex min-w-max flex-nowrap shadow-none";
 
 export const HEADER_TAB_TRIGGER_CLASS =
-  "h-8 rounded-md border border-input px-3 text-[9px] font-medium uppercase tracking-[0.08em] shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-[background-color,border-color,color,box-shadow,transform] duration-200 hover:-translate-y-px hover:border-primary/40 hover:shadow-[0_5px_14px_-10px_rgba(15,23,42,0.38)] gap-1.5 shrink-0 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-[0_1px_2px_rgba(15,23,42,0.06)]";
+  `${BUTTON_INTERACTION_CLASS} ${BUTTON_HEADER_SURFACE_CLASS} h-8 rounded-md px-3 text-[9px] font-medium uppercase tracking-[0.08em] gap-1.5 shrink-0 data-[state=active]:!border-[hsl(var(--header-button-border))] data-[state=active]:!bg-[hsl(var(--header-button-hover))] data-[state=active]:!text-[hsl(var(--header-button-foreground))] data-[state=active]:hover:!bg-[hsl(var(--header-button-hover))]`;
 
 export const HEADER_COMPACT_CONTROL_CLASS =
-  "h-7 rounded-md border border-input bg-background px-3 py-1 text-[9px] font-black uppercase tracking-[0.08em] shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-px hover:border-primary/40 hover:shadow-[0_5px_14px_-10px_rgba(15,23,42,0.34)] gap-1.5 shrink-0";
+  `${BUTTON_INTERACTION_CLASS} ${BUTTON_HEADER_SURFACE_CLASS} h-7 rounded-md px-3 py-1 text-[9px] font-black uppercase tracking-[0.08em] gap-1.5 shrink-0`;
 
 export const HEADER_VIEW_SWITCHER_CLASS =
-  "h-7 rounded-md border-button-secondary-border bg-button-secondary px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.08em] text-button-secondary-foreground shadow-none transition-colors hover:bg-button-secondary-accent hover:text-button-secondary-accent-foreground";
+  `${BUTTON_HEADER_SURFACE_CLASS} h-7 rounded-md px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.08em] shadow-none`;
 
 export const HEADER_VIEW_SWITCHER_ACTIVE_CLASS =
-  "border-button-primary-border bg-button-primary text-button-primary-foreground hover:bg-button-primary-accent hover:text-button-primary-accent-foreground";
+  BUTTON_HEADER_SELECTED_SURFACE_CLASS;
 
 export const CARD_HEADER_BAND_CLASS =
   "min-h-[38px] shrink-0 border-b border-card-border/80 bg-[hsl(var(--card-header-band-background))] px-2 py-1 text-[hsl(var(--card-header-band-foreground))] shadow-[inset_0_-1px_0_hsl(var(--card-border)/0.18)] md:px-3";

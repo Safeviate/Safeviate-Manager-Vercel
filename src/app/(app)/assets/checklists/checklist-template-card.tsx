@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { Copy, Pencil, PlayCircle, Trash2, MoreHorizontal, ChevronsUpDown, Layers3 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, BUTTON_HEADER_SURFACE_CLASS } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -136,7 +136,7 @@ export function ChecklistTemplateCard({ category, templates, onDelete }: Checkli
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-8 w-8 shrink-0 border-[hsl(var(--header-button-border))] bg-[hsl(var(--header-button-background))] p-0 shadow-none"
+                            className={`h-8 w-8 shrink-0 p-0 shadow-none ${BUTTON_HEADER_SURFACE_CLASS}`}
                           >
                             <MoreHorizontal className="h-3.5 w-3.5" />
                           </Button>

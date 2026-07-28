@@ -712,7 +712,13 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                             type="button"
                             onClick={() => setActiveTab(step.tab)}
                             title={`${index + 1}. ${step.label}`}
-                            className={`${HEADER_TAB_TRIGGER_CLASS} h-8 ${isActive ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                            data-state={isActive ? "active" : "inactive"}
+                            aria-pressed={isActive}
+                            className={cn(
+                              HEADER_TAB_TRIGGER_CLASS,
+                              "h-8",
+                              isActive && HEADER_VIEW_SWITCHER_ACTIVE_CLASS,
+                            )}
                           >
                             <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${step.complete ? 'bg-emerald-500' : 'bg-amber-400'}`} />
                             <span>{index + 1}. {step.label}</span>
@@ -724,7 +730,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                       <div className="w-full max-w-[278px]">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button type="button" variant="outline" size="sm" className={`${HEADER_TAB_TRIGGER_CLASS} h-7 w-full max-w-full justify-between gap-2 bg-white px-3 text-[10px] text-slate-700`}>
+                          <Button type="button" variant="outline" size="sm" className={`${HEADER_TAB_TRIGGER_CLASS} ${HEADER_VIEW_SWITCHER_ACTIVE_CLASS} h-7 w-full max-w-full justify-between gap-2 px-3 text-[10px]`}>
                             {(() => {
                               const currentStep = visibleWorkflowSteps.find((step) => step.tab === activeTab);
                               const currentIndex = visibleWorkflowSteps.findIndex((step) => step.tab === activeTab);

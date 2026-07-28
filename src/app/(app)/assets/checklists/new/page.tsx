@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ArrowLeft, GripVertical, Loader2, PlusCircle, Trash2, Layers3 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, BUTTON_HEADER_SURFACE_CLASS } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -358,7 +358,7 @@ export default function AssetInspectionChecklistsPage() {
                     type="button"
                     variant="outline"
                     onClick={addSection}
-                    className="h-10 justify-start gap-2 border-[hsl(var(--header-button-border))] bg-[hsl(var(--header-button-background))] px-3 text-[10px] font-black uppercase shadow-none hover:bg-[hsl(var(--header-button-hover))]"
+                    className={`h-10 justify-start gap-2 px-3 text-[10px] font-black uppercase shadow-none ${BUTTON_HEADER_SURFACE_CLASS}`}
                   >
                     <PlusCircle className="h-4 w-4" />
                     Manual Creation
