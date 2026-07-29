@@ -369,6 +369,10 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
               <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{report.immediateAction}</p>
             </div>
           ) : null}
+          <div className="border-t px-4 py-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-primary">Recommendation</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{report.recommendation || 'No recommendation recorded.'}</p>
+          </div>
         </section>
 
         <section className="overflow-hidden rounded-lg border">
@@ -509,6 +513,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
           </div>
           <div className="border-t px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Initial narrative</p><p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{initialNarrative || 'No narrative recorded.'}</p></div>
           {report.immediateAction ? <div className="border-t bg-amber-50/50 px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-800">Immediate action recorded</p><p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{report.immediateAction}</p></div> : null}
+          <div className="border-t px-4 py-4"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-primary">Recommendation</p><p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{report.recommendation || 'No recommendation recorded.'}</p></div>
         </section>
         <section className="overflow-hidden rounded-lg border">
           <div className={CARD_COMPACT_HEADER_BAND_CLASS}><h2 className="text-sm font-black uppercase tracking-wide">Hazards and Risk Assessment</h2><Badge variant="secondary">{risks.length} recorded</Badge></div>
