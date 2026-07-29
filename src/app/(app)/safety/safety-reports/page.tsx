@@ -751,6 +751,7 @@ export default function SafetyReportsPage() {
             location: report.location,
             description,
             immediateAction: report.immediateAction || null,
+            recommendation: report.recommendation || null,
             occurrenceCategory: 'Quick Safety Report',
             eventClassification,
             sourceQuickReportId: report.id,

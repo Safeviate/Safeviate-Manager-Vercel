@@ -233,6 +233,7 @@ export interface SafetyReport {
     location: string;
     description: string;
     immediateAction?: string | null;
+    recommendation?: string | null;
     organizationId?: string | null; // Associated external company ID
     // Conditional Fields
     phaseOfFlight?: string;

@@ -27,6 +27,7 @@ export interface TechnicalQuickReport {
   urgency?: 'Low' | 'Medium' | 'High';
   summary: string;
   immediateAction?: string | null;
+  recommendation?: string | null;
   photoAttachments?: QuickReportPhotoAttachment[] | null;
   aircraftId?: string | null;
   aircraftLabel?: string | null;
@@ -55,6 +56,7 @@ export interface QuickSafetyReport {
   aircraftLabel?: string | null;
   summary: string;
   immediateAction?: string | null;
+  recommendation?: string | null;
   photoAttachments?: QuickReportPhotoAttachment[] | null;
   recommendedClassification?: 'Hazard' | 'Incident' | 'Accident' | 'General Concern';
   linkedSafetyReportId?: string | null;

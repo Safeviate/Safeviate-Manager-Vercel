@@ -106,10 +106,11 @@ export async function PUT(request: Request, context: { params: Promise<{ reportI
   }
 
   const existingReport = row.data as SafetyReport;
-  const incomingReport = data as SafetyReport;
-  const nextReport: SafetyReport = ['Closed - Monitoring', 'Closed - Effective'].includes(incomingReport.status)
-    ? { ...incomingReport, closedDate: incomingReport.closedDate || new Date().toISOString() }
-    : incomingReport;
+  const incomingReport = data as Partial<SafetyReport>;
+  const mergedReport = { ...existingReport, ...incomingReport } as SafetyReport;
+  const nextReport: SafetyReport = ['Closed - Monitoring', 'Closed - Effective'].includes(mergedReport.status)
+    ? { ...mergedReport, closedDate: mergedReport.closedDate || new Date().toISOString() }
+    : mergedReport;
   const lifecycleError = validateLifecycleUpdate(existingReport, nextReport);
   if (lifecycleError) {
     return NextResponse.json({ error: lifecycleError }, { status: 422 });

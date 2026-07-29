@@ -33,6 +33,7 @@ const quickSafetySchema = z.object({
   aircraftId: z.string().optional(),
   summary: z.string().min(10, 'Please provide a useful summary.'),
   immediateAction: z.string().optional(),
+  recommendation: z.string().optional(),
   submitAnonymous: z.boolean().default(false),
   reporterName: z.string().optional(),
   reporterEmail: z.string().email('Please enter a valid email address.').optional().or(z.literal('')),
@@ -95,6 +96,7 @@ export default function QuickSafetyReportPage() {
       aircraftId: '',
       summary: '',
       immediateAction: '',
+      recommendation: '',
       submitAnonymous: isPublicPortal,
       reporterName: '',
       reporterEmail: '',
@@ -122,6 +124,7 @@ export default function QuickSafetyReportPage() {
             aircraftLabel: selectedAircraft ? `${selectedAircraft.tailNumber} (${selectedAircraft.model})` : null,
             summary: values.summary,
             immediateAction: values.immediateAction || null,
+            recommendation: values.recommendation || null,
             photoAttachments: photoAttachments.length > 0 ? photoAttachments : null,
             tenantId: publicTenantId || undefined,
             submitAnonymous: isAnonymous,
@@ -463,6 +466,15 @@ export default function QuickSafetyReportPage() {
                   </FormItem>
                 )}
               />
+              <FormField control={form.control} name="recommendation" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Recommendation</FormLabel>
+                  <FormControl>
+                    <Textarea className="min-h-24" placeholder="Record any recommended follow-up or preventive action." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
               <div className="space-y-3">
                 <div className="space-y-1">
                   <p className="text-sm font-medium">Photos</p>

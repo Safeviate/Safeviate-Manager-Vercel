@@ -581,6 +581,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                   <EditReportDialog 
                     report={report} 
                     tenantId={tenantId} 
+                    onReportSaved={handleReportSaved}
                     trigger={
                       <Button variant="outline" size="sm" className={`${HEADER_SECONDARY_BUTTON_CLASS} !h-8 !gap-1.5 !px-3 !py-1.5 !text-[9px]`}>
                           <Pencil className="h-3.5 w-3.5" />
@@ -681,6 +682,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                         <EditReportDialog
                           report={report}
                           tenantId={tenantId}
+                          onReportSaved={handleReportSaved}
                           trigger={<DropdownMenuItem onSelect={(event) => event.preventDefault()}><Pencil className="mr-2 h-4 w-4" />Edit report</DropdownMenuItem>}
                         />
                         <Dialog>

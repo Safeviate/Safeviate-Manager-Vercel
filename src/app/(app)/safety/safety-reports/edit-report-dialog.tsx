@@ -26,10 +26,12 @@ const parseLocalDate = (value: string) => {
 
 const formSchema = z.object({
   reportType: z.string().min(1, "Report type is required."),
+  title: z.string().min(1, "Report heading is required."),
   eventDate: z.date({ required_error: "Event date is required." }),
   eventTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: "Invalid time format (HH:mm)." }),
   location: z.string().min(1, "Location is required."),
   description: z.string().min(10, "Please provide a detailed description."),
+  immediateAction: z.string().nullable(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -38,9 +40,10 @@ interface EditReportDialogProps {
   report: SafetyReport;
   tenantId: string;
   trigger?: ReactNode;
+  onReportSaved?: (report: SafetyReport) => void;
 }
 
-export function EditReportDialog({ report, tenantId, trigger }: EditReportDialogProps) {
+export function EditReportDialog({ report, tenantId, trigger, onReportSaved }: EditReportDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
@@ -48,10 +51,12 @@ export function EditReportDialog({ report, tenantId, trigger }: EditReportDialog
     resolver: zodResolver(formSchema),
     defaultValues: {
       reportType: report.reportType,
+      title: report.title || '',
       eventDate: parseLocalDate(report.eventDate),
       eventTime: report.eventTime,
       location: report.location,
       description: report.description,
+      immediateAction: report.immediateAction || '',
     },
   });
 
@@ -59,10 +64,12 @@ export function EditReportDialog({ report, tenantId, trigger }: EditReportDialog
     if (isOpen) {
       form.reset({
         reportType: report.reportType,
+        title: report.title || '',
         eventDate: parseLocalDate(report.eventDate),
         eventTime: report.eventTime,
         location: report.location,
         description: report.description,
+        immediateAction: report.immediateAction || '',
       });
     }
   }, [isOpen, report, form]);
@@ -84,6 +91,9 @@ export function EditReportDialog({ report, tenantId, trigger }: EditReportDialog
         const payload = await response.json().catch(() => null);
         throw new Error(payload?.error || 'Unable to update this report right now.');
       }
+      const payload = await response.json();
+      const updatedReport = payload?.report as SafetyReport | undefined;
+      if (updatedReport) onReportSaved?.(updatedReport);
       toast({ title: 'Report Updated', description: `Safety Report #${report.reportNumber} has been updated.` });
       dispatchSafeviateEvent(SAFEVIATE_SAFETY_REPORTS_UPDATED);
       setIsOpen(false);
@@ -116,6 +126,13 @@ export function EditReportDialog({ report, tenantId, trigger }: EditReportDialog
             <FormField control={form.control} name="reportType" render={({ field }) => (
               <FormItem>
                 <FormLabel>Report Type</FormLabel>
+                <FormControl><Input {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="title" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Report Heading</FormLabel>
                 <FormControl><Input {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -159,6 +176,13 @@ export function EditReportDialog({ report, tenantId, trigger }: EditReportDialog
               <FormItem>
                 <FormLabel>Description</FormLabel>
                 <FormControl><Textarea className="min-h-32" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="immediateAction" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Immediate Action</FormLabel>
+                <FormControl><Textarea className="min-h-24" {...field} value={field.value || ''} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
