@@ -228,14 +228,12 @@ export function TriageForm({ report, tenantId, isStacked = false, onReportSaved 
                             </div>
                           </div>
                         ) : null}
-                        {report.recommendation ? (
-                          <div>
+                        <div>
                             <p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-primary">Recommendation</p>
                             <div className="rounded-lg border border-input bg-primary/5 px-4 py-3">
-                              <p className="whitespace-pre-wrap text-sm font-medium leading-relaxed text-foreground">{report.recommendation}</p>
+                              <p className="whitespace-pre-wrap text-sm font-medium leading-relaxed text-foreground">{report.recommendation || 'No recommendation recorded.'}</p>
                             </div>
-                          </div>
-                        ) : null}
+                        </div>
                         </div>
                     </section>
 
