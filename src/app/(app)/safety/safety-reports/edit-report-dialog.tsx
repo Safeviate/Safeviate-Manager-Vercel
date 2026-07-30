@@ -32,6 +32,7 @@ const formSchema = z.object({
   location: z.string().min(1, "Location is required."),
   description: z.string().min(10, "Please provide a detailed description."),
   immediateAction: z.string().nullable(),
+  recommendation: z.string().nullable(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -57,6 +58,7 @@ export function EditReportDialog({ report, tenantId, trigger, onReportSaved }: E
       location: report.location,
       description: report.description,
       immediateAction: report.immediateAction || '',
+      recommendation: report.recommendation || '',
     },
   });
 
@@ -70,6 +72,7 @@ export function EditReportDialog({ report, tenantId, trigger, onReportSaved }: E
         location: report.location,
         description: report.description,
         immediateAction: report.immediateAction || '',
+        recommendation: report.recommendation || '',
       });
     }
   }, [isOpen, report, form]);
@@ -182,6 +185,13 @@ export function EditReportDialog({ report, tenantId, trigger, onReportSaved }: E
             <FormField control={form.control} name="immediateAction" render={({ field }) => (
               <FormItem>
                 <FormLabel>Immediate Action</FormLabel>
+                <FormControl><Textarea className="min-h-24" {...field} value={field.value || ''} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="recommendation" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Recommendation</FormLabel>
                 <FormControl><Textarea className="min-h-24" {...field} value={field.value || ''} /></FormControl>
                 <FormMessage />
               </FormItem>
