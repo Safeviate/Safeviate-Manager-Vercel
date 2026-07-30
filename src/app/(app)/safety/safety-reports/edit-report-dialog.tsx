@@ -119,13 +119,13 @@ export function EditReportDialog({ report, tenantId, trigger, onReportSaved }: E
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="flex max-h-[calc(100dvh-1rem)] max-w-2xl flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Edit Report #{report.reportNumber}</DialogTitle>
           <DialogDescription>Modify the basic details of the safety report.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="min-h-0 space-y-4 overflow-y-auto px-1 pb-1 pt-4">
             <FormField control={form.control} name="reportType" render={({ field }) => (
               <FormItem>
                 <FormLabel>Report Type</FormLabel>
