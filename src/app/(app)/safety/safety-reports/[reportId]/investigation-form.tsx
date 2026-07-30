@@ -28,6 +28,7 @@ import type {
   InvestigationInterview,
   InvestigationPhotoAttachment,
   InvestigationTask,
+  InvestigationTaskStatus,
   InvestigationTaskUpdate,
   ReportDiscussionItem,
   ReportRootCauseCategory,
@@ -360,16 +361,23 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
     const task = currentTasks[taskIndex];
     if (!task) return false;
 
+    const nextTaskStatus: InvestigationTaskStatus = task.status === 'Completed' ? 'Completed' : 'In Progress';
+
     const nextUpdate: InvestigationTaskUpdate = {
       id: uuidv4(),
       userId: userProfile.id,
       userName: `${userProfile.firstName} ${userProfile.lastName}`,
       message: trimmedMessage,
       timestamp: new Date().toISOString(),
-      taskStatus: task.status,
+      taskStatus: nextTaskStatus,
     };
 
     const previousUpdates = task.updates || [];
+    const previousStatus = task.status;
+    form.setValue(`investigationTasks.${taskIndex}.status`, nextTaskStatus, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
     form.setValue(`investigationTasks.${taskIndex}.updates`, [...previousUpdates, nextUpdate], {
       shouldDirty: true,
       shouldValidate: true,
@@ -377,6 +385,10 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
 
     const saved = await persistInvestigation(form.getValues(), 'Task feedback saved');
     if (!saved) {
+      form.setValue(`investigationTasks.${taskIndex}.status`, previousStatus, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
       form.setValue(`investigationTasks.${taskIndex}.updates`, previousUpdates, {
         shouldDirty: true,
         shouldValidate: true,

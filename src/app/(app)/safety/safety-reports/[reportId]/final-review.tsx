@@ -329,7 +329,7 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors }: ReviewFiel
   return (
     <>
       <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-        <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} justify-start`}>
+        <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} !justify-start`}>
             <div className="p-1.5 rounded-md bg-primary/10 text-primary"><Users className="h-4 w-4" /></div>
             <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Interview Review</h3>
         </div>
@@ -383,7 +383,7 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors }: ReviewFiel
       </section>
 
       <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-        <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} justify-start`}>
+        <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} !justify-start`}>
           <div className="p-1.5 rounded-md bg-primary/10 text-primary"><Users className="h-4 w-4" /></div>
           <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Human Factors - SHELL Review</h3>
         </div>
@@ -400,7 +400,7 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors }: ReviewFiel
       </section>
 
       <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-        <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} justify-start`}>
+        <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} !justify-start`}>
             <div className="p-1.5 rounded-md bg-primary/10 text-primary"><SearchCheck className="h-4 w-4" /></div>
             <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Root Cause Review</h3>
         </div>
@@ -439,7 +439,7 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors }: ReviewFiel
       </section>
 
       <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-        <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} justify-start`}>
+        <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} !justify-start`}>
             <div className="p-1.5 rounded-md bg-primary/10 text-primary"><ShieldCheck className="h-4 w-4" /></div>
             <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Residual Risk Review</h3>
         </div>
@@ -649,6 +649,19 @@ function ClosureMonitoringPanel({ report, showClosure = true, showMonitoring = t
   };
 
   const saveLifecycle = () => {
+    if (nextStatus === 'Closed - Effective') {
+      const actions = report.correctiveActions || [];
+      const hasUnresolvedAction = actions.some((action) => !['Closed', 'Cancelled'].includes(action.status));
+      const hasUnverifiedEffectiveness = actions.some((action) => action.status !== 'Cancelled' && action.effectivenessStatus !== 'Effective');
+      if (hasUnresolvedAction || hasUnverifiedEffectiveness) {
+        toast({
+          variant: 'destructive',
+          title: 'Effectiveness verification required',
+          description: 'Close or cancel every corrective action and record it as Effective before selecting Closed - Effective.',
+        });
+        return;
+      }
+    }
     void saveReport(buildLifecycleReport(), nextStatus === 'Reopened' ? 'Report Reopened' : 'Lifecycle Review Saved');
   };
 
@@ -704,6 +717,11 @@ function ClosureMonitoringPanel({ report, showClosure = true, showMonitoring = t
   const saveActionEffectiveness = (actionId: string, effectivenessStatus = actionStatuses[actionId] || 'Pending') => {
     const updatedActions = (report.correctiveActions || []).map((action) => action.id === actionId ? {
       ...action,
+      status: effectivenessStatus === 'Effective'
+        ? 'Closed'
+        : effectivenessStatus === 'Partially Effective' || effectivenessStatus === 'Ineffective'
+          ? 'In Progress'
+          : action.status,
       effectivenessStatus,
       effectivenessVerificationMethod: 'Post-implementation operational monitoring',
       effectivenessEvidence: actionNotes[actionId] || null,
@@ -809,6 +827,7 @@ function ClosureMonitoringPanel({ report, showClosure = true, showMonitoring = t
       {showMonitoring && (report.correctiveActions || []).length > 0 ? (
         <div className="space-y-2">
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Control effectiveness records</p>
+          <p className="text-xs text-muted-foreground">Save evidence before marking a control effective. Effective closes the corrective action; partially effective or ineffective returns it to In Progress for follow-up.</p>
           {(report.correctiveActions || []).map((action) => (
             <div key={action.id} className="grid gap-3 rounded-lg border bg-background p-3 md:grid-cols-[minmax(0,1fr)_180px_auto] md:items-end">
               <div className="min-w-0"><p className="text-sm font-semibold">{action.description}</p><Textarea value={actionNotes[action.id] || ''} onChange={(event) => setActionNotes({ ...actionNotes, [action.id]: event.target.value })} placeholder="Verification evidence or operational observation" className="mt-2 min-h-16 text-xs" /><Button type="button" variant="outline" size="sm" onClick={() => saveActionEffectiveness(action.id)} disabled={isSaving} className="mt-2 h-8 text-[10px] font-black uppercase">Save evidence</Button></div>
