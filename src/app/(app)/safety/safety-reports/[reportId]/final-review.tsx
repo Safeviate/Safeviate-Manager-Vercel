@@ -600,6 +600,7 @@ function ClosureMonitoringPanel({ report, showClosure = true, showMonitoring = t
   const requiresRootCause = hasHighSeverityRisk || ['Incident', 'Serious Incident', 'Accident'].includes(report.eventClassification || '');
   const hasDocumentedRootCause = (report.rootCauseAnalyses || []).some((cause) => cause.title?.trim() && cause.analysis?.trim());
   const isInMonitoring = ['Closed - Monitoring', 'Closed - Effective'].includes(nextStatus);
+  const feedbackEntryAvailable = isInMonitoring || Boolean(plan.reviewDate);
   const availableClosureStatuses = ['Closed - Monitoring', 'Closed - Effective'].includes(report.status)
     ? [...closureStatuses.slice(0, 2), 'Closed - Effective' as const, 'Reopened' as const]
     : closureStatuses;
@@ -795,8 +796,8 @@ function ClosureMonitoringPanel({ report, showClosure = true, showMonitoring = t
             }}
           />
         </div>
-        {!isInMonitoring ? <p className="mt-3 text-xs text-muted-foreground">The dated feedback-entry form becomes available once the report enters closure monitoring. Use the control records below to save early verification evidence.</p> : null}
-        {isInMonitoring ? (
+        {!feedbackEntryAvailable ? <p className="mt-3 text-xs text-muted-foreground">Save the feedback date to open the feedback-entry form. Use the control records below to save early verification evidence.</p> : null}
+        {feedbackEntryAvailable ? (
           <div className="mt-4 border-t border-input pt-4">
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               <div className="space-y-1.5"><Label>Evaluation date</Label><Input type="date" value={evaluationDate} onChange={(event) => setEvaluationDate(event.target.value)} /></div>
