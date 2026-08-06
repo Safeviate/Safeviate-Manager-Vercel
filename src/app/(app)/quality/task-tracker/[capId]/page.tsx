@@ -18,8 +18,6 @@ import { CapTaskDetailCard, parseCapFindingLevel, parseCapObservation } from '..
 import type { CorrectiveActionPlan, QualityAudit } from '@/types/quality';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { OfflineCacheButton } from '@/components/offline-cache-button';
-import { RecurringFindingPanel } from '../recurring-finding-panel';
-import type { RecommendedCorrectiveAction } from '@/types/quality';
 
 const FINDING_ROUTE_PREFIX = 'finding::';
 const LOCAL_DRAFT_CAP_PREFIX = 'draft::';
@@ -194,6 +192,13 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
       return;
     }
 
+    // A finding route remains in draft-editor mode after its first CAP is
+    // saved. Do not recreate the initial blank draft in that case; additional
+    // drafts are created explicitly by the Add Corrective Action button.
+    if (isDraftEditorRoute && hasAnySavedCorrectiveActions && draftCaps.length === 0) {
+      return;
+    }
+
     const draftKey = `${capEntry.cap.auditId}:${capEntry.cap.findingId}`;
     setDraftCaps((current) => {
       const matchingDrafts = current.filter((draft) => `${draft.auditId}:${draft.findingId}` === draftKey);
@@ -202,7 +207,7 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
       }
       return [buildLocalDraftCap(capEntry.cap)];
     });
-  }, [capEntry, isDraftEditorRoute, isDraftFindingOnly]);
+  }, [capEntry, draftCaps.length, hasAnySavedCorrectiveActions, isDraftEditorRoute, isDraftFindingOnly]);
 
   useEffect(() => {
     if (draftCaps.length === 0) return;
@@ -217,16 +222,6 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
       return;
     }
     window.location.href = draftUrl;
-  };
-
-  const handleApplyRecommendation = (recommendation: RecommendedCorrectiveAction) => {
-    if (!capEntry) return;
-    setDraftCaps((current) => {
-      const draft = buildLocalDraftCap(capEntry.cap);
-      draft.rootCauseAnalysis = recommendation.description;
-      draft.responsiblePersonId = recommendation.responsiblePersonId || capEntry.cap.responsiblePersonId || '';
-      return [...current, draft];
-    });
   };
 
   const handleCapSaved = (savedCap: CorrectiveActionPlan) => {
@@ -328,10 +323,6 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
               <div className="flex min-w-0 flex-col gap-1.5">
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Corrective Action Task</p>
                 <p className="text-[11px] font-medium leading-3.5 text-muted-foreground">Review the finding, open its corrective actions, and maintain each action separately.</p>
-                <div className="px-0 py-0">
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Finding</p>
-                  <p className="mt-1 text-sm font-medium text-foreground">{capEntry.observation}</p>
-                </div>
               </div>
             )}
             actions={(
@@ -350,7 +341,7 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
               </div>
             )}
             navigation={(
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex min-h-10 flex-wrap items-center gap-1.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <Button asChild variant="outline" className={HEADER_COMPACT_CONTROL_CLASS}>
                     <Link href={`/quality/audits/${capEntry.audit.id}`}>Audit #{capEntry.audit.auditNumber}</Link>
@@ -369,13 +360,19 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
         </div>
         <CardContent className="bg-muted/5 p-4">
           <div className="space-y-4">
-            <RecurringFindingPanel auditId={capEntry.audit.id} findingId={capEntry.cap.findingId} onApply={handleApplyRecommendation} />
+            <Card className="overflow-hidden border-card-border shadow-none">
+              <CardHeader className="border-b border-card-border bg-[hsl(var(--card-header-band-background))] px-3 py-2">
+                <CardTitle className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Finding Description</CardTitle>
+              </CardHeader>
+              <CardContent className="px-3 py-3">
+                <p className="text-sm font-medium leading-5 text-foreground">{capEntry.observation}</p>
+              </CardContent>
+            </Card>
             {draftCaps.map((draftCap, index) => (
               <div key={draftCap.id} ref={index === draftCaps.length - 1 ? latestDraftCardRef : null}>
                 <CapTaskDetailCard
                   cap={draftCap}
                   audit={capEntry.audit}
-                  observation={capEntry.observation}
                   findingLevel={capEntry.findingLevel}
                   personnel={personnel}
                   currentUserId={userProfile?.id}
@@ -393,7 +390,6 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
                 key={relatedCap.id}
                 cap={relatedCap}
                 audit={capEntry.audit}
-                observation={capEntry.observation}
                 findingLevel={capEntry.findingLevel}
                 personnel={personnel}
                 currentUserId={userProfile?.id}

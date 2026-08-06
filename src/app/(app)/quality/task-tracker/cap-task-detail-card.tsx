@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -9,9 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { DocumentUploader } from '@/components/document-uploader';
 import { useToast } from '@/hooks/use-toast';
-import { CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
+import { CalendarIcon, Pencil, Save, Trash2 } from 'lucide-react';
 import { CardControlHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_COMPACT_CONTROL_CLASS } from '@/components/page-header';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import type { CorrectiveActionPlan, CorrectiveActionPlanEvidence, CorrectiveActionPlanResponse, QualityAudit, QualityFinding } from '@/types/quality';
@@ -51,7 +49,6 @@ export const parseCapFindingLevel = (finding?: QualityFinding) => finding?.level
 interface CapTaskDetailCardProps {
   cap: CorrectiveActionPlan;
   audit: QualityAudit;
-  observation: string;
   findingLevel: string;
   personnel: Personnel[];
   currentUserId?: string;
@@ -69,11 +66,12 @@ export interface CapTaskDetailCardHandle {
 }
 
 export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDetailCardProps>(function CapTaskDetailCard(
-  { cap, audit, observation, findingLevel, personnel, currentUserId, currentUserName, rolePermissions = [], hideLeadSummary = false, onDeleteCap = null, onSaved = null, canDeleteCap = false, isDeletingCap = false }: CapTaskDetailCardProps,
+  { cap, audit, findingLevel, personnel, currentUserId, currentUserName, rolePermissions = [], hideLeadSummary = false, onDeleteCap = null, onSaved = null, canDeleteCap = false, isDeletingCap = false }: CapTaskDetailCardProps,
   ref,
 ) {
   const { toast } = useToast();
   const correctiveActionRef = useRef<HTMLTextAreaElement | null>(null);
+  const responseRef = useRef<HTMLTextAreaElement | null>(null);
   const hasSavedPrimaryAction = hasSavedPrimaryCorrectiveAction(cap);
   const [rootCauseAnalysis, setRootCauseAnalysis] = useState(hasSavedPrimaryAction ? (cap.rootCauseAnalysis || '') : '');
   const [responsiblePersonId, setResponsiblePersonId] = useState(getDefaultResponsiblePersonId(cap, audit));
@@ -85,6 +83,7 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
   const [editingResponseMeta, setEditingResponseMeta] = useState<Pick<CorrectiveActionPlanResponse, 'createdAt' | 'createdById' | 'createdByName'> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDueDateOpen, setIsDueDateOpen] = useState(false);
+  const [isResponseOpen, setIsResponseOpen] = useState(false);
   const hasQualityManagementPermission =
     rolePermissions.includes('*')
     || rolePermissions.includes('admin-view')
@@ -96,6 +95,7 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
       || hasQualityManagementPermission
     )
   );
+  const hasUnsavedDescription = rootCauseAnalysis.trim() !== (cap.rootCauseAnalysis?.trim() || '');
   useEffect(() => {
     const shouldShowPrimaryAssignment = hasSavedPrimaryCorrectiveAction(cap);
     setRootCauseAnalysis(shouldShowPrimaryAssignment ? (cap.rootCauseAnalysis || '') : '');
@@ -115,7 +115,14 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
     textarea.style.height = `${Math.max(textarea.scrollHeight, 44)}px`;
   }, [rootCauseAnalysis]);
 
-  const saveCap = async () => {
+  useEffect(() => {
+    const textarea = responseRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.max(textarea.scrollHeight, 44)}px`;
+  }, [responseDraft, isResponseOpen]);
+
+  const saveCap = async (responsesOverride?: CorrectiveActionPlanResponse[]) => {
     try {
       setIsSaving(true);
       const response = await fetch('/api/corrective-action-plans', {
@@ -128,7 +135,7 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
             responsiblePersonId,
             dueDate: dueDate ? toNoonUtcIso(parseLocalDate(dueDate)) : '',
             actions: [],
-            responses,
+            responses: responsesOverride || responses,
           },
         }),
       });
@@ -170,7 +177,7 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
         title: 'Not Allowed',
         description: 'Only the assigned CAP owner or a user with quality management permissions can add responses.',
       });
-      return;
+      return null;
     }
 
     const message = responseDraft.trim();
@@ -180,7 +187,7 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
         title: 'No Response Entered',
         description: 'Add a response note or attach evidence before adding a CAP reply.',
       });
-      return;
+      return null;
     }
 
     const nextResponse: CorrectiveActionPlanResponse = {
@@ -192,11 +199,13 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
       evidence: draftEvidence,
     };
 
-    setResponses((current) => [nextResponse, ...current]);
+    const nextResponses = [nextResponse, ...responses.filter((item) => item.id !== nextResponse.id)];
+    setResponses(nextResponses);
     setResponseDraft('');
     setDraftEvidence([]);
     setEditingResponseId(null);
     setEditingResponseMeta(null);
+    return nextResponses;
   };
 
   const beginEditResponse = (response: CorrectiveActionPlanResponse) => {
@@ -208,11 +217,12 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
     });
     setResponseDraft(response.message || '');
     setDraftEvidence(response.evidence || []);
-    setResponses((current) => current.filter((item) => item.id !== response.id));
   };
 
   const removeResponse = (responseId: string) => {
-    setResponses((current) => current.filter((item) => item.id !== responseId));
+    const nextResponses = responses.filter((item) => item.id !== responseId);
+    setResponses(nextResponses);
+    return nextResponses;
   };
 
   return (
@@ -235,17 +245,14 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
                     {isDeletingCap ? 'Deleting...' : 'Delete CAP'}
                   </Button>
                 ) : null}
-                <Button type="button" variant="default" className={HEADER_ACTION_BUTTON_CLASS} onClick={saveCap} disabled={isSaving}>
+                <Button type="button" variant="default" className={HEADER_ACTION_BUTTON_CLASS} onClick={() => void saveCap()} disabled={isSaving}>
                   {isSaving ? 'Saving...' : 'Save CAP'}
                 </Button>
               </div>
             )}
             navigation={(
-              <div className="flex flex-wrap items-center justify-between gap-1.5">
+              <div className="flex min-h-10 flex-wrap items-center justify-start gap-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button asChild variant="outline" className={HEADER_COMPACT_CONTROL_CLASS}>
-                    <Link href={`/quality/audits/${audit.id}`}>Audit #{audit.auditNumber}</Link>
-                  </Button>
                   <Badge variant="outline" className="h-7 rounded-md border-card-border bg-background px-2.5 text-[9px] font-black uppercase tracking-[0.08em] text-foreground">
                     {cap.status}
                   </Badge>
@@ -285,10 +292,15 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
                       </PopoverContent>
                     </Popover>
                   </div>
+                  {hasUnsavedDescription ? <span className="px-1 text-[9px] font-black uppercase tracking-[0.08em] text-amber-700">Unsaved changes</span> : null}
+                  <Button type="button" variant="outline" className={HEADER_COMPACT_CONTROL_CLASS} onClick={() => void saveCap()} disabled={isSaving || !rootCauseAnalysis.trim() || !hasUnsavedDescription}>
+                    <Save className="h-3.5 w-3.5" />
+                    Save Description
+                  </Button>
+                  <Button type="button" variant="outline" className={HEADER_COMPACT_CONTROL_CLASS} onClick={() => setIsResponseOpen((current) => !current)} disabled={!canManageCapResponses}>
+                      Add Response
+                  </Button>
                 </div>
-                <p className="min-w-0 max-w-full truncate text-[11px] leading-4 text-muted-foreground md:max-w-[420px]">
-                  {observation}
-                </p>
               </div>
             )}
           />
@@ -308,115 +320,87 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
           </div>
         </div>
 
-        <div className="mx-3 mb-3 grid gap-3 lg:grid-cols-2">
-          <div className="flex h-full flex-col rounded-lg border border-card-border bg-background p-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Corrective Action Feedback</p>
-              <p className="mt-1 text-xs text-muted-foreground">Use this space for progress notes, implementation updates, and close-out feedback for this corrective action.</p>
-            </div>
-
-            <div className="mt-3 flex flex-1 flex-col gap-3">
-              <Textarea value={responseDraft} onChange={(event) => setResponseDraft(event.target.value)} placeholder="Add feedback for this corrective action..." className="min-h-[25px] bg-background" disabled={!canManageCapResponses} />
-              {!canManageCapResponses ? <div className="rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900">Only the assigned CAP owner or a user with quality management permissions can post feedback and upload evidence.</div> : null}
-
-              <div className="mt-auto flex justify-end">
-                <div className="flex items-center gap-2">
-                  {editingResponseId ? <Button type="button" variant="ghost" size="sm" className="h-[25px] px-3 text-xs" onClick={() => { setEditingResponseId(null); setEditingResponseMeta(null); setResponseDraft(''); setDraftEvidence([]); }}>Cancel Edit</Button> : null}
-                  <Button type="button" variant="outline" size="sm" className="h-[25px] px-3 text-xs" onClick={addResponse} disabled={!canManageCapResponses}>
-                    {editingResponseId ? 'Update Feedback' : 'Add Feedback'}
-                  </Button>
-                </div>
+        {isResponseOpen ? (
+          <div className="mx-3 mb-3 rounded-md border border-card-border bg-muted/5 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Corrective Action Response</p>
+                <p className="text-[11px] leading-4 text-muted-foreground">Add a progress note or implementation update for this corrective action.</p>
               </div>
+              <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => { setIsResponseOpen(false); setResponseDraft(''); setEditingResponseId(null); setEditingResponseMeta(null); setDraftEvidence([]); }}>
+                Cancel
+              </Button>
+            </div>
+            <Textarea
+              ref={responseRef}
+              rows={1}
+              value={responseDraft}
+              onChange={(event) => setResponseDraft(event.target.value)}
+              placeholder="Enter a response..."
+              className="mt-3 min-h-11 resize-none overflow-hidden bg-background"
+              disabled={!canManageCapResponses}
+              autoFocus
+            />
+            <div className="mt-2 flex justify-end">
+              <Button
+                type="button"
+                variant="default"
+                disabled={!canManageCapResponses || !responseDraft.trim()}
+                onClick={async () => {
+                  const nextResponses = addResponse();
+                  if (nextResponses) {
+                    const savedCap = await saveCap(nextResponses);
+                    if (savedCap) setIsResponseOpen(false);
+                  }
+                }}
+              >
+                Add Response
+              </Button>
             </div>
           </div>
+        ) : null}
 
-          <div className="flex h-full flex-col rounded-lg border border-card-border bg-background p-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Corrective Action Evidence</p>
-              <p className="mt-1 text-xs text-muted-foreground">Upload documents or photos that support this corrective action and its latest feedback update.</p>
-            </div>
-
-            <div className="mt-3 flex flex-1 flex-col gap-3">
-              <div className="space-y-2">
-              {draftEvidence.length > 0 ? (
-                draftEvidence.map((document) => (
-                  <div key={document.id} className="flex items-center justify-between gap-3 rounded-md border bg-muted/10 px-3 py-2">
-                    <div className="min-w-0">
-                      <a href={document.url} target="_blank" rel="noreferrer" className="block truncate text-sm font-semibold text-foreground underline decoration-slate-300 underline-offset-4">{document.name}</a>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Uploaded {format(new Date(document.uploadDate), 'dd MMM yyyy')}</p>
-                    </div>
-                    <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10" onClick={() => setDraftEvidence((current) => current.filter((item) => item.id !== document.id))}>
-                      <Trash2 className="mr-1 h-3.5 w-3.5" />
-                      Remove
-                    </Button>
+        {responses.length > 0 ? (
+          <div className="mx-3 mb-3 space-y-2">
+            {responses.map((response, index) => (
+              <div key={response.id} className="rounded-md border border-card-border bg-background px-3 py-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Corrective Action Response {responses.length - index}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-[10px] font-semibold text-muted-foreground">
+                      {response.createdByName || 'Unknown user'} · {format(new Date(response.createdAt), 'dd MMM yyyy HH:mm')}
+                    </p>
+                    {canManageCapResponses ? (
+                      <>
+                        <Button type="button" variant="ghost" size="sm" className="h-6 px-1.5 text-[10px]" onClick={() => { beginEditResponse(response); setIsResponseOpen(true); }}>
+                          <Pencil className="mr-1 h-3 w-3" />
+                          Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-1.5 text-[10px] text-destructive hover:bg-destructive/10"
+                          onClick={async () => {
+                            const previousResponses = responses;
+                            const nextResponses = removeResponse(response.id);
+                            const savedCap = await saveCap(nextResponses);
+                            if (!savedCap) setResponses(previousResponses);
+                          }}
+                        >
+                          <Trash2 className="mr-1 h-3 w-3" />
+                          Delete
+                        </Button>
+                      </>
+                    ) : null}
                   </div>
-                ))
-              ) : (
-                <div className="rounded-lg border border-dashed border-card-border bg-muted/5 px-3 py-6 text-center text-sm text-muted-foreground">
-                  No draft evidence attached yet.
                 </div>
-              )}
+                <p className="mt-1.5 whitespace-pre-wrap text-sm text-foreground">{response.message || 'Evidence uploaded without a written response.'}</p>
               </div>
-
-              <div className="mt-auto flex justify-end">
-                <DocumentUploader
-                  defaultFileName={`cap-evidence-${audit.auditNumber}`}
-                  trigger={(open) => (
-                    <Button type="button" variant="outline" size="sm" onClick={() => open()} disabled={!canManageCapResponses} className="h-[25px] px-3 text-xs">
-                      <PlusCircle className="mr-1 h-3 w-3" />
-                      Add Evidence
-                    </Button>
-                  )}
-                  onDocumentUploaded={async (document) => {
-                    setDraftEvidence((current) => [
-                      ...current,
-                      { id: crypto.randomUUID(), name: document.name, url: document.url, uploadDate: document.uploadDate },
-                    ]);
-                  }}
-                />
-              </div>
-            </div>
+            ))}
           </div>
-        </div>
+        ) : null}
 
-        <div className="mx-3 mb-3 space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Feedback History</p>
-            <Badge variant="outline" className="h-[22px] rounded-lg border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
-              {responses.length} updates
-            </Badge>
-          </div>
-          {responses.length > 0 ? responses.map((response) => (
-            <div key={response.id} className="rounded-lg border border-card-border bg-background px-3 py-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-foreground">{response.createdByName || 'Unknown user'}</p>
-                <div className="flex items-center gap-2">
-                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">{format(new Date(response.createdAt), 'dd MMM yyyy HH:mm')}</p>
-                  {canManageCapResponses ? (
-                    <>
-                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-black uppercase" onClick={() => beginEditResponse(response)}>Edit</Button>
-                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10" onClick={() => removeResponse(response.id)}>Remove</Button>
-                    </>
-                  ) : null}
-                </div>
-              </div>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{response.message || 'Evidence uploaded without a written response.'}</p>
-              {response.evidence && response.evidence.length > 0 ? (
-                <div className="mt-3 space-y-2">
-                  {response.evidence.map((document) => (
-                    <a key={document.id} href={document.url} target="_blank" rel="noreferrer" className="block rounded-md border bg-muted/10 px-3 py-2 text-sm font-semibold text-foreground underline decoration-slate-300 underline-offset-4">
-                      {document.name}
-                    </a>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          )) : (
-            <div className="rounded-lg border border-dashed border-slate-300 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
-              No feedback has been added yet.
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
