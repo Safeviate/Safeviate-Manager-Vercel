@@ -15,7 +15,6 @@ import { OrganizationTabsRow } from '@/components/responsive-tab-row';
 import { ViewActionButton } from '@/components/record-action-buttons';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
 import { useToast } from '@/hooks/use-toast';
@@ -361,59 +360,41 @@ export default function TaskTrackerPage() {
     }
   };
 
-  const renderTasksTable = (tasks: UnifiedTask[]) => (
-    <ResponsiveCardGrid
-      items={tasks}
-      isLoading={false}
-      className="p-4"
-      gridClassName="sm:grid-cols-2 xl:grid-cols-3"
-      renderItem={(task) => (
-          <Card
-            key={task.id}
-            className={cn(
-              "overflow-hidden border shadow-none transition-shadow hover:shadow-sm",
-            )}
-          >
-            <CardHeader className="flex flex-row items-start justify-between gap-3 border-b bg-muted/20 px-4 py-3">
-              <div className="min-w-0 space-y-1">
-                <p className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">{task.description}</p>
-                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  {task.sourceType} - {task.sourceIdentifier}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-2">
-                <Badge variant="outline" className={cn('text-[9px] font-black uppercase py-0.5 px-3', getSourceBadgeClassName(task.sourceType))}>
-                  {task.sourceType}
-                </Badge>
-              <Badge variant={getStatusBadgeVariant(task.status)} className="text-[10px] font-black uppercase py-0.5 px-3">
-                {task.status}
-              </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4 px-4 py-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border bg-background px-3 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assignee</p>
-                <p className="mt-1 text-sm font-semibold text-foreground">{task.assigneeName}</p>
-              </div>
-              <div className="rounded-lg border bg-background px-3 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Do by</p>
-                <p className="mt-1 text-sm font-semibold text-foreground">{format(parseLocalDate(task.dueDate), 'dd MMM yy')}</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-end">
-              <ViewActionButton href={task.link} />
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      emptyState={(
+  const renderTasksTable = (tasks: UnifiedTask[]) => {
+    if (tasks.length === 0) {
+      return (
         <div className="h-24 text-center flex items-center justify-center text-muted-foreground text-[10px] uppercase font-black tracking-widest bg-muted/5">
           No outstanding tasks for this organization.
         </div>
-      )}
-    />
-  );
+      );
+    }
+
+    return (
+      <div className="divide-y divide-card-border px-4">
+        {tasks.map((task) => (
+          <div key={task.id} className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">{task.description}</p>
+              <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                {task.sourceType} - {task.sourceIdentifier}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              <Badge variant="outline" className={cn('text-[9px] font-black uppercase py-0.5 px-3', getSourceBadgeClassName(task.sourceType))}>
+                {task.sourceType}
+              </Badge>
+              <Badge variant={getStatusBadgeVariant(task.status)} className="text-[10px] font-black uppercase py-0.5 px-3">
+                {task.status}
+              </Badge>
+              <span className="text-[10px] font-semibold text-muted-foreground">{task.assigneeName}</span>
+              <span className="text-[10px] font-semibold text-muted-foreground">Due {format(parseLocalDate(task.dueDate), 'dd MMM yy')}</span>
+              <ViewActionButton href={task.link} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const renderCapBoard = (entries: AuditFindingEntry[]) => {
     if (entries.length === 0) return null;
