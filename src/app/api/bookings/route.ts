@@ -107,7 +107,19 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => null);
     const incoming = body?.booking ?? {};
-    const id = incoming.id || randomUUID();
+    const requestedBookingId = typeof incoming.id === 'string' ? incoming.id.trim() : '';
+    const id = requestedBookingId || randomUUID();
+
+    if (requestedBookingId) {
+      const existingBooking = await prisma.bookingRecord.findUnique({
+        where: { id },
+        select: { tenantId: true },
+      });
+
+      if (existingBooking && existingBooking.tenantId !== resolvedTenantId) {
+        return NextResponse.json({ error: 'Booking not found in the active tenant.' }, { status: 404 });
+      }
+    }
 
     if (incoming.aircraftId && incoming.type !== 'Maintenance') {
       const [aircraftRow, configRow] = await Promise.all([
@@ -256,12 +268,16 @@ export async function PUT(request: Request) {
 
     await ensureBookingsSchema();
 
-    const existing = await prisma.bookingRecord.findFirst({
-      where: { id: bookingId, tenantId },
-      select: { data: true },
+    const existing = await prisma.bookingRecord.findUnique({
+      where: { id: bookingId },
+      select: { data: true, tenantId: true },
     });
 
-    const existingData = (existing?.data as Record<string, any> | null) || null;
+    if (!existing || existing.tenantId !== tenantId) {
+      return NextResponse.json({ error: 'Booking not found in the active tenant.' }, { status: 404 });
+    }
+
+    const existingData = (existing.data as Record<string, any> | null) || null;
     const assignedInstructorId = typeof existingData?.instructorId === 'string' ? existingData.instructorId.trim() : '';
     if (hasBookingSignatureMutation(existingData, incoming)) {
       if (!actorId) {
@@ -310,16 +326,9 @@ export async function PUT(request: Request) {
       ...incoming,
     };
 
-    await prisma.bookingRecord.upsert({
+    await prisma.bookingRecord.update({
       where: { id: bookingId },
-      create: {
-        id: bookingId,
-        tenantId,
-        data: mergedData,
-      },
-      update: {
-        data: mergedData,
-      },
+      data: { data: mergedData },
     });
 
     invalidateRouteCache(`dashboard-summary:${tenantId}`);

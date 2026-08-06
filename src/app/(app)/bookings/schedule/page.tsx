@@ -58,7 +58,15 @@ const SCHEDULE_VIEWS = [
     { value: 'rooms', label: 'Briefing Rooms' },
     { value: 'vehicles', label: 'Vehicles' },
 ] as const;
+const BOOKING_CATEGORY_VIEWS = [
+    { value: 'all', label: 'All Bookings' },
+    { value: 'Training', label: 'Flight School' },
+    { value: 'Commercial', label: 'Commercial' },
+] as const;
 const REQUIRED_CHECK_APPROVAL_KEYS = ['massAndBalance', 'navlog', 'preFlight', 'postFlight', 'photos', 'fuelUplift'] as const;
+
+const getBookingScheduleCategory = (booking: Booking): 'Training' | 'Commercial' =>
+    ['Charter', 'Ferry Flight'].includes(booking.type) ? 'Commercial' : 'Training';
 
 const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
     if (!dateStr || !timeStr) {
@@ -165,7 +173,7 @@ const BookingItem = ({
 }) => {
     const isNonInstructorBooking = ['Rental', 'Charter', 'Ferry Flight', 'Maintenance'].includes(booking.type);
     const compactCrewLabel = isNonInstructorBooking
-        ? `PIC ${booking.studentId ? (peopleMap.get(booking.studentId) || booking.studentId) : 'N/A'}`
+        ? `PIC ${booking.studentId ? (peopleMap.get(booking.studentId) || booking.studentId) : 'N/A'} · Co-pilot ${booking.coPilotId ? (peopleMap.get(booking.coPilotId) || booking.coPilotId) : 'N/A'}`
         : `Inst ${booking.instructorId ? (peopleMap.get(booking.instructorId) || booking.instructorId) : 'N/A'} · Stud ${booking.studentId ? (peopleMap.get(booking.studentId) || booking.studentId) : 'N/A'}`;
     const segments = getBookingDateSegments(booking);
 
@@ -228,6 +236,11 @@ const BookingItem = ({
                             <p className="w-full truncate text-[8px] font-normal leading-tight opacity-90">
                                 {isNonInstructorBooking ? 'PIC' : 'Stud'}: {booking.studentId ? (peopleMap.get(booking.studentId) || booking.studentId) : 'N/A'}
                             </p>
+                            {isNonInstructorBooking ? (
+                                <p className="w-full truncate text-[8px] font-normal leading-tight opacity-90">
+                                    Co-pilot: {booking.coPilotId ? (peopleMap.get(booking.coPilotId) || booking.coPilotId) : 'N/A'}
+                                </p>
+                            ) : null}
                           </>
                         )}
                     </div>
@@ -458,6 +471,7 @@ export default function SchedulePage() {
   const [isRoomBookingFormOpen, setIsRoomBookingFormOpen] = useState(false);
   const [roomBookingFormData, setRoomBookingFormData] = useState<{ roomId: string; roomName: string; startTime: Date; booking?: Booking } | null>(null);
   const [scheduleView, setScheduleView] = useState<(typeof SCHEDULE_VIEWS)[number]['value']>('aircraft');
+  const [bookingCategoryView, setBookingCategoryView] = useState<(typeof BOOKING_CATEGORY_VIEWS)[number]['value']>('all');
   const [dataVersion, setDataVersion] = useState(0);
   const [isMaintenanceDialogOpen, setIsMaintenanceDialogOpen] = useState(false);
   const [selectedMaintenanceAircraftId, setSelectedMaintenanceAircraftId] = useState<string>('');
@@ -758,12 +772,17 @@ export default function SchedulePage() {
   };
 
   const selectedDateKey = format(selectedDate, 'yyyy-MM-dd');
+  const visibleBookings = useMemo(() => (
+    bookingCategoryView === 'all'
+      ? bookings
+      : bookings.filter((booking) => getBookingScheduleCategory(booking) === bookingCategoryView)
+  ), [bookings, bookingCategoryView]);
   const briefingRoomBookings = useMemo(() => {
-    return (bookings || []).filter((booking) => {
+    return (visibleBookings || []).filter((booking) => {
       if (!booking.briefingRoomId) return false;
       return getBookingDateSegments(booking).some((segment) => segment.date === selectedDateKey);
     });
-  }, [bookings, selectedDateKey]);
+  }, [visibleBookings, selectedDateKey]);
 
   const handleRoomSlotClick = (room: { id: string; name: string }, hour: number) => {
     if (!canManageSchedule) {
@@ -1078,6 +1097,18 @@ export default function SchedulePage() {
                         buttonLikeTabs
                     />
                 </Tabs>
+                <ResponsiveTabRow
+                    value={bookingCategoryView}
+                    onValueChange={(value) => setBookingCategoryView(value as typeof bookingCategoryView)}
+                    placeholder="Select Schedule"
+                    className="w-full border-0 bg-transparent px-0 pt-2 pb-0"
+                    options={BOOKING_CATEGORY_VIEWS.map((view) => ({
+                        value: view.value,
+                        label: view.label,
+                    }))}
+                    centerTabs
+                    buttonLikeTabs
+                />
             </div>
             <CardContent className="p-0 flex-grow flex flex-col overflow-hidden">
                 <div className={cn("w-full flex-grow overflow-auto bg-card custom-scrollbar", !isAircraftView && 'hidden')} style={{ height: 'calc(100vh - 220px)' }}>
@@ -1165,7 +1196,7 @@ export default function SchedulePage() {
 
                                 {(aircraft || []).map((ac) => {
                                     const selectedDateKey = format(selectedDate, 'yyyy-MM-dd');
-                                    const relevantBookings = (bookings || []).filter((b) =>
+                                    const relevantBookings = (visibleBookings || []).filter((b) =>
                                         b.aircraftId === ac.id && getBookingDateSegments(b).some((segment) => segment.date === selectedDateKey)
                                     );
                                     const activeMaintenance = (ac.maintenanceWindows || []).filter((window) => isDateWithinWindow(selectedDateKey, window));

@@ -89,6 +89,7 @@ const bookingFormSchema = z.object({
     endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid end time"),
     instructorId: z.string().optional(),
     studentId: z.string().optional(),
+    coPilotId: z.string().optional(),
     isOvernight: z.boolean().default(false),
     overnightBookingDate: z.date().optional(),
     overnightEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid overnight end time").optional(),
@@ -119,13 +120,14 @@ interface BookingFormProps {
     refreshBookings: () => void;
 }
 
-type BookingDraft = Omit<Booking, 'id' | 'bookingNumber' | 'instructorId' | 'studentId' | 'notes' | 'overnightBookingDate' | 'overnightEndTime' | 'preFlightData' | 'postFlightData' | 'preFlight' | 'postFlight' | 'overrides'> & {
+type BookingDraft = Omit<Booking, 'id' | 'bookingNumber' | 'instructorId' | 'studentId' | 'coPilotId' | 'notes' | 'overnightBookingDate' | 'overnightEndTime' | 'preFlightData' | 'postFlightData' | 'preFlight' | 'postFlight' | 'overrides'> & {
     id?: string;
     bookingNumber?: string;
     navlog?: Booking['navlog'];
     workflowCompletion?: Booking['workflowCompletion'];
     instructorId?: string | null;
     studentId?: string | null;
+    coPilotId?: string | null;
     notes?: string | null;
     overnightBookingDate?: string | null;
     overnightEndTime?: string | null;
@@ -230,6 +232,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
         endTime: existingBooking ? existingBooking.endTime : format(addMinutes(startTime, 60), 'HH:mm'),
         instructorId: existingBooking?.instructorId || '',
         studentId: existingBooking?.studentId || '',
+        coPilotId: existingBooking?.coPilotId || '',
         isOvernight: existingBooking?.isOvernight || false,
         overnightBookingDate: parseLocalDate(existingBooking?.overnightBookingDate),
         overnightEndTime: existingBooking?.overnightEndTime || '08:00',
@@ -266,6 +269,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     const isOvernight = form.watch('isOvernight');
     const watchStatus = form.watch('status');
     const watchType = form.watch('type');
+    const isTrainingBooking = watchType === 'Training Flight';
     const isMaintenanceBooking = watchType === 'Maintenance';
     const isNonInstructorBooking = ['Rental', 'Charter', 'Ferry Flight', 'Maintenance'].includes(watchType);
     const showInstructorField = !isMaintenanceBooking && !isNonInstructorBooking;
@@ -407,6 +411,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             end: endIso,
             instructorId: isNonInstructorBooking ? null : data.instructorId || null,
             studentId: data.studentId || null,
+            coPilotId: isNonInstructorBooking ? data.coPilotId || null : null,
             status: data.status,
             notes: data.notes || null,
             isOvernight: data.isOvernight,
@@ -734,7 +739,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                 )}
 
                                 {!isMaintenanceBooking ? (
-                                <div className={cn('grid grid-cols-1 gap-4', showInstructorField ? 'md:grid-cols-2' : 'md:grid-cols-1')}>
+                                <div className={cn('grid grid-cols-1 gap-4', showInstructorField || isNonInstructorBooking ? 'md:grid-cols-2' : 'md:grid-cols-1')}>
                                     {showInstructorField ? (
                                     <FormField
                                         control={form.control}
@@ -787,18 +792,44 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                             </FormItem>
                                         )}
                                     />
+                                    {isNonInstructorBooking ? (
+                                    <FormField
+                                        control={form.control}
+                                        name="coPilotId"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-[9px] font-black uppercase tracking-widest">Co-pilot</FormLabel>
+                                                <FormControl>
+                                                    <select
+                                                        value={field.value || ''}
+                                                        onChange={(event) => field.onChange(event.target.value)}
+                                                        disabled={isLocked || !canEditBooking}
+                                                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    >
+                                                        <option value="">Select Co-pilot...</option>
+                                                        {pilots.map((pilot) => (
+                                                            <option key={pilot.id} value={pilot.id}>
+                                                                {pilot.firstName} {pilot.lastName}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    ) : null}
                                 </div>
                                 ) : null}
 
                                 <div className="grid gap-2 lg:grid-cols-2">
                                     {!existingBooking ? (
-                                        !isMaintenanceBooking ? (
+                                        isTrainingBooking ? (
                                         <div className="rounded-xl border border-emerald-100 bg-emerald-50/30 p-3 space-y-3 sm:p-4">
                                             <p className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-emerald-700">
-                                                 <MapIcon className="h-3.5 w-3.5" /> Mission Profile
+                                                 <MapIcon className="h-3.5 w-3.5" /> Training Profile
                                             </p>
-                                            {watchType === 'Training Flight' ? (
-                                                <FormField control={form.control} name="trainingExerciseTemplateKey" render={({ field }) => (
+                                            <FormField control={form.control} name="trainingExerciseTemplateKey" render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel className="text-[8px] font-black uppercase">Training Exercise</FormLabel>
                                                         <Select onValueChange={field.onChange} value={field.value || DEFAULT_TRAINING_EXERCISE_TEMPLATE_KEY} disabled={isLocked || !canEditBooking}>
@@ -818,7 +849,6 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                                         <FormMessage />
                                                     </FormItem>
                                                 )} />
-                                            ) : null}
                                             <FormField control={form.control} name="routeId" render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel className="text-[8px] font-black uppercase">Preset Training Route (Optional)</FormLabel>
@@ -841,7 +871,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                                 </FormItem>
                                             )} />
                                         </div>
-                                        ) : (
+                                        ) : isMaintenanceBooking ? (
                                         <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-3 space-y-2 sm:p-4">
                                             <p className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-amber-800">
                                                 <Lock className="h-3.5 w-3.5" /> Aircraft Maintenance Block
@@ -850,16 +880,16 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                                 This creates an aircraft maintenance window instead of a flight booking and will block the aircraft on the schedule for every day in the selected range.
                                             </p>
                                         </div>
-                                        )
-                                    ) : (
-                                        <div />
-                                    )}
+                                        ) : null
+                                    ) : null}
 
                                     <FormField control={form.control} name="notes" render={({ field }) => (
-                                        <FormItem className={cn('rounded-xl border bg-background p-3 shadow-sm sm:p-4', existingBooking ? 'lg:col-span-2' : '')}>
+                                        <FormItem className={cn('rounded-xl border bg-background p-3 shadow-sm sm:p-4', existingBooking || !isTrainingBooking ? 'lg:col-span-2' : '')}>
                                             <div className="space-y-1.5">
                                                 <FormLabel>Admin Notes</FormLabel>
-                                                <p className="text-xs text-muted-foreground">Add any relevant notes for dispatch or follow-up.</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {isTrainingBooking ? 'Add any relevant notes for dispatch or follow-up.' : 'Add dispatch instructions or operational notes.'}
+                                                </p>
                                             </div>
                                             <FormControl>
                                                 <Textarea placeholder="Add any relevant notes..." {...field} disabled={!canEditBooking} rows={2} className="min-h-[56px]" />
@@ -883,7 +913,11 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                     <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2.5">
                                         <div className="space-y-0.5">
                                             <p className="text-[10px] font-black uppercase tracking-widest">Require Weather / Map / Navlog</p>
-                                            <p className="text-[10px] text-muted-foreground">Instructor can only approve after these are completed when enabled.</p>
+                                            <p className="text-[10px] text-muted-foreground">
+                                                {isTrainingBooking
+                                                    ? 'Instructor can only approve after these are completed when enabled.'
+                                                    : 'Authorised staff can only approve after these are completed when enabled.'}
+                                            </p>
                                         </div>
                                         <Switch
                                             checked={requireWeatherPlanningNavlog}

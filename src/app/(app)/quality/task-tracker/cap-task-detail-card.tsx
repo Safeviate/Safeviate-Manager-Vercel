@@ -276,7 +276,7 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
                     <span className="text-[9px] font-black uppercase tracking-[0.08em] text-muted-foreground">Due</span>
                     <Popover open={isDueDateOpen} onOpenChange={setIsDueDateOpen}>
                       <PopoverTrigger asChild>
-                        <Button type="button" variant="ghost" className="h-6 min-w-[115px] justify-between px-1 py-0 text-[10px] font-semibold shadow-none hover:bg-transparent hover:text-foreground">
+                        <Button type="button" variant="ghost" className="h-6 min-w-[115px] justify-between px-1 py-0 text-[10px] font-semibold shadow-none hover:!border-transparent hover:bg-transparent hover:text-foreground">
                           <span>{dueDate ? format(parseLocalDate(dueDate), 'dd MMM yy') : 'Pick a date'}</span>
                           <CalendarIcon className="h-3.5 w-3.5 opacity-50" />
                         </Button>

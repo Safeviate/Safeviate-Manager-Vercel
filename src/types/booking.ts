@@ -149,6 +149,7 @@ export interface Booking {
   aircraftId: string;
   instructorId?: string;
   studentId?: string;
+  coPilotId?: string;
   studentIds?: string[];
   briefingRoomId?: string;
   briefingRoomName?: string;
