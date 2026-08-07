@@ -30,6 +30,7 @@ import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 
 type EnrichedBooking = Booking & {
   aircraftTailNumber?: string;
@@ -156,6 +157,10 @@ const BookingsTable = ({
                                 <p className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">
                                     {b.bookingNumber}
                                 </p>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    <Badge variant="outline" className="text-[9px] font-black uppercase">{b.type}</Badge>
+                                    {b.commercialDetails?.missionNumber ? <span className="truncate text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{b.commercialDetails.missionNumber}</span> : null}
+                                </div>
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-3 px-4 py-4">
@@ -332,6 +337,7 @@ export default function BookingsHistoryPage() {
               label: tab.label,
               icon: ListFilter,
             }))}
+            buttonLikeTabs
           />
           <CardContent className='flex flex-1 min-h-0 p-0'>
                 <div className={cn("flex-1 min-h-0 overflow-auto pb-4", isMobile ? "h-full" : "h-full")}>

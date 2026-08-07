@@ -9,6 +9,19 @@ async function getTenantId(request: Request) {
   return getTenantIdForRoute(request);
 }
 
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function getClientNumber(value: unknown) {
+  const match = /^CLI-(\d+)$/.exec(String(value || '').trim());
+  return match ? Number(match[1]) : 0;
+}
+
+function formatClientNumber(sequence: number) {
+  return `CLI-${String(sequence).padStart(5, '0')}`;
+}
+
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const tenantId = await getTenantId(request);
@@ -42,10 +55,26 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ error: 'Missing organization payload.' }, { status: 400 });
     }
 
+    const currentRows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
+      `SELECT data FROM external_organizations WHERE id = $1 AND tenant_id = $2 LIMIT 1`,
+      id,
+      tenantId
+    );
+    const currentData = toRecord(currentRows[0]?.data);
+    let clientNumber = String(currentData.clientNumber || incoming.clientNumber || '').trim();
+    if (!getClientNumber(clientNumber)) {
+      const allRows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
+        `SELECT data FROM external_organizations WHERE tenant_id = $1`,
+        tenantId
+      );
+      const highest = allRows.reduce((max, row) => Math.max(max, getClientNumber(toRecord(row.data).clientNumber)), 0);
+      clientNumber = formatClientNumber(highest + 1);
+    }
+
     await prisma.$executeRawUnsafe(
       `UPDATE external_organizations SET data = $2::jsonb, updated_at = NOW() WHERE id = $1 AND tenant_id = $3`,
       id,
-      JSON.stringify({ ...incoming, id }),
+      JSON.stringify({ ...currentData, ...incoming, id, clientNumber }),
       tenantId
     );
 

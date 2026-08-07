@@ -26,6 +26,35 @@ export interface PostFlightData {
 
 export type BookingStatus = 'Tentative' | 'Confirmed' | 'Approved' | 'Completed' | 'Cancelled' | 'Cancelled with Reason';
 
+export type BookingOperationProfile = 'training' | 'commercial' | 'maintenance';
+
+export type CommercialTripStatus = 'Draft' | 'Quoted' | 'Confirmed' | 'Released' | 'Dispatched' | 'Airborne' | 'Arrived' | 'Completed' | 'Cancelled';
+
+export interface CharterCosting {
+    currency?: string;
+    quotedAmount?: number;
+    finalAmount?: number;
+    aircraftCost?: number;
+    fuelCost?: number;
+    landingFees?: number;
+    crewCost?: number;
+    handlingCost?: number;
+    otherCost?: number;
+}
+
+export interface CommercialBookingDetails {
+    missionNumber?: string;
+    clientNumber?: string;
+    customerName?: string;
+    operationType?: 'Charter' | 'Corporate' | 'Ferry' | 'Positioning' | 'Rental';
+    tripStatus?: CommercialTripStatus;
+    passengerCount?: number;
+    passengerNames?: string[];
+    specialRequirements?: string;
+    quoteReference?: string;
+    charterCosting?: CharterCosting;
+}
+
 export interface MassAndBalance {
     takeoffWeight?: number;
     takeoffCg?: number;
@@ -139,6 +168,7 @@ export interface Booking {
   id: string;
   bookingNumber: string;
   type: string;
+  operationProfile?: BookingOperationProfile;
   trainingExerciseTemplateKey?: string;
   trainingExerciseLabel?: string;
   start: string; // ISO String
@@ -176,6 +206,7 @@ export interface Booking {
   massAndBalance?: MassAndBalance;
   navlog?: Navlog;
   organizationId?: string | null; // Associated external company ID
+  commercialDetails?: CommercialBookingDetails;
   overrides?: OverrideLog[];
   landingConfirmed?: boolean;
   // Accounting fields

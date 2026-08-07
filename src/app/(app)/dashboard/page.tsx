@@ -1802,7 +1802,14 @@ export default function DashboardPage() {
                 <div className="flex h-full w-full flex-wrap items-center justify-between gap-3">
                   <TabsList className={cn(HEADER_TAB_LIST_CLASS, 'border-0 bg-transparent px-0 py-0')}>
                     {tabs.map((tab) => (
-                      <TabsTrigger key={tab.value} value={tab.value} className={HEADER_TAB_TRIGGER_CLASS}>
+                      <TabsTrigger
+                        key={tab.value}
+                        value={tab.value}
+                        className={cn(
+                          HEADER_TAB_TRIGGER_CLASS,
+                          'data-[state=active]:!bg-background data-[state=active]:!text-foreground data-[state=active]:shadow-sm'
+                        )}
+                      >
                         {renderTabLabel(tab)}
                       </TabsTrigger>
                     ))}

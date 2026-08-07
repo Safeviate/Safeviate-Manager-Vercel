@@ -1101,7 +1101,7 @@ export default function SchedulePage() {
                     value={bookingCategoryView}
                     onValueChange={(value) => setBookingCategoryView(value as typeof bookingCategoryView)}
                     placeholder="Select Schedule"
-                    className="w-full border-0 bg-transparent px-0 pt-2 pb-0"
+                    className="mt-2 w-full border-x-0 border-b-0 border-t border-border/60 bg-transparent px-0 pt-2 pb-0"
                     options={BOOKING_CATEGORY_VIEWS.map((view) => ({
                         value: view.value,
                         label: view.label,

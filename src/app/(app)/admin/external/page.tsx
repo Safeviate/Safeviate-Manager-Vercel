@@ -8,13 +8,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { PlusCircle } from 'lucide-react';
+import { Eye, History, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { ExternalOrganization } from '@/types/quality';
+import type { Booking } from '@/types/booking';
 import { ChevronsUpDown } from 'lucide-react';
 import { DeleteActionButton, EditActionButton } from '@/components/record-action-buttons';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,17 @@ import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-s
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
 
 const EXTERNAL_ORGANIZATIONS_UPDATED_EVENT = 'safeviate-external-organizations-updated';
+
+function formatHistoryDate(value?: string) {
+  if (!value) return 'No date';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
+}
+
+function formatHistoryAmount(value?: number) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
+  return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 export default function ExternalCompaniesPage() {
   const { toast } = useToast();
@@ -37,9 +49,17 @@ export default function ExternalCompaniesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<ExternalOrganization | null>(null);
   const [name, setName] = useState('');
+  const [contactName, setContactName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [billingAddress, setBillingAddress] = useState('');
+  const [taxNumber, setTaxNumber] = useState('');
   const [copyCoherenceMatrix, setCopyCoherenceMatrix] = useState(true);
+  const [historyClient, setHistoryClient] = useState<ExternalOrganization | null>(null);
+  const [clientHistory, setClientHistory] = useState<Booking[]>([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
   if (!isAccessLoading && !isAllowed) {
     return <TenantLayoutDisabledState />;
@@ -68,8 +88,12 @@ export default function ExternalCompaniesPage() {
     if (!canManage) return;
     setEditingOrg(org);
     setName(org?.name || '');
+    setContactName(org?.contactName || '');
     setEmail(org?.contactEmail || '');
+    setPhone(org?.contactPhone || '');
     setAddress(org?.address || '');
+    setBillingAddress(org?.billingAddress || '');
+    setTaxNumber(org?.taxNumber || '');
     setCopyCoherenceMatrix(!org);
     setIsFormOpen(true);
   };
@@ -77,7 +101,7 @@ export default function ExternalCompaniesPage() {
   const handleSave = async () => {
     if (!canManage) return;
     if (!name.trim()) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Organization name is required.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Client name is required.' });
       return;
     }
 
@@ -85,8 +109,13 @@ export default function ExternalCompaniesPage() {
         const organization: ExternalOrganization = {
           id: editingOrg?.id || crypto.randomUUID(),
           name,
+          clientNumber: editingOrg?.clientNumber,
+          contactName,
           contactEmail: email,
+          contactPhone: phone,
           address,
+          billingAddress,
+          taxNumber,
         };
         const response = await fetch(editingOrg ? `/api/external-organizations/${editingOrg.id}` : '/api/external-organizations', {
           method: editingOrg ? 'PATCH' : 'POST',
@@ -97,7 +126,7 @@ export default function ExternalCompaniesPage() {
         const result = await response.json().catch(() => ({}));
         window.dispatchEvent(new Event(EXTERNAL_ORGANIZATIONS_UPDATED_EVENT));
         toast({
-          title: editingOrg ? 'Company Updated' : 'Company Created',
+          title: editingOrg ? 'Client Updated' : 'Client Created',
           description: !editingOrg && Number(result.copiedItemCount) > 0
             ? `${result.copiedItemCount} internal coherence matrix entries were copied for this company.`
             : undefined,
@@ -114,9 +143,34 @@ export default function ExternalCompaniesPage() {
         const response = await fetch(`/api/external-organizations/${id}`, { method: 'DELETE' });
         if (!response.ok) throw new Error('Failed to delete organization');
         window.dispatchEvent(new Event(EXTERNAL_ORGANIZATIONS_UPDATED_EVENT));
-        toast({ title: 'Company Deleted' });
+        toast({ title: 'Client Deleted' });
     } catch (e) {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete organization.' });
+    }
+  };
+
+  const handleOpenHistory = async (org: ExternalOrganization) => {
+    setHistoryClient(org);
+    setClientHistory([]);
+    setIsHistoryOpen(true);
+    setIsHistoryLoading(true);
+
+    try {
+      const response = await fetch('/api/bookings', { cache: 'no-store' });
+      const payload = await response.json().catch(() => ({ bookings: [] }));
+      const bookings = Array.isArray(payload.bookings) ? payload.bookings as Booking[] : [];
+      const linkedBookings = bookings
+        .filter((booking) => (
+          booking.organizationId === org.id
+          || Boolean(org.clientNumber && booking.commercialDetails?.clientNumber === org.clientNumber)
+        ))
+        .sort((a, b) => new Date(b.start || b.date).getTime() - new Date(a.start || a.date).getTime());
+      setClientHistory(linkedBookings);
+    } catch (error) {
+      console.error('Failed to load client booking history', error);
+      toast({ variant: 'destructive', title: 'History unavailable', description: 'The client booking history could not be loaded.' });
+    } finally {
+      setIsHistoryLoading(false);
     }
   };
 
@@ -139,7 +193,7 @@ export default function ExternalCompaniesPage() {
               >
                 <span className="flex items-center gap-2">
                   <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'mr-2 h-4 w-4'} />
-                  Add Company
+                  Add Client
                 </span>
                 {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
               </Button>
@@ -154,9 +208,10 @@ export default function ExternalCompaniesPage() {
                   <Table>
                     <TableHeader className="[&_tr]:border-0">
                       <TableRow>
-                        <TableHead>Company Name</TableHead>
+                        <TableHead>Client Number</TableHead>
+                        <TableHead>Client / Company Name</TableHead>
+                        <TableHead>Contact Person</TableHead>
                         <TableHead>Contact Email</TableHead>
-                        <TableHead>Address</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -166,30 +221,44 @@ export default function ExternalCompaniesPage() {
               <Table>
                 <TableBody>
                   {isLoadingOrgs ? (
-                    <TableRow><TableCell colSpan={4} className="text-center p-8">Loading...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center p-8">Loading...</TableCell></TableRow>
                   ) : (organizations || []).map(org => (
                     <TableRow key={org.id}>
+                      <TableCell className="font-black">{org.clientNumber || 'Pending'}</TableCell>
                       <TableCell className="font-medium">{org.name}</TableCell>
+                      <TableCell>{org.contactName || 'N/A'}</TableCell>
                       <TableCell>{org.contactEmail || 'N/A'}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{org.address || 'N/A'}</TableCell>
                       <TableCell className="text-right">
-                        {canManage ? (
-                          <div className="flex justify-end gap-2">
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-1.5"
+                            onClick={() => void handleOpenHistory(org)}
+                          >
+                            <History className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">History</span>
+                          </Button>
+                          {canManage ? (
                             <EditActionButton onClick={() => handleOpenForm(org)} label="Edit company" />
+                          ) : null}
+                          {canManage ? (
                             <DeleteActionButton
                               description={`This will permanently delete external company "${org.name}".`}
                               onDelete={() => handleDelete(org.id)}
                               srLabel="Delete company"
                             />
-                          </div>
-                        ) : (
+                          ) : null}
+                          {!canManage ? (
                           <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Read only</span>
-                        )}
+                          ) : null}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
                   {(!organizations || organizations.length === 0) && !isLoadingOrgs && (
-                    <TableRow><TableCell colSpan={4} className="text-center h-24 text-muted-foreground">No external companies found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center h-24 text-muted-foreground">No clients found.</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
@@ -201,21 +270,47 @@ export default function ExternalCompaniesPage() {
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingOrg ? 'Edit' : 'Add'} Company</DialogTitle>
-            <DialogDescription>Define the details for the external company.</DialogDescription>
+            <DialogTitle>{editingOrg ? 'Edit' : 'Add'} Client</DialogTitle>
+            <DialogDescription>Maintain the client profile used by commercial bookings and accounting.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Company Name</Label>
+              <Label htmlFor="name">Client / Company Name</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Contact Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            {editingOrg?.clientNumber ? (
+              <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assigned Client Number</p>
+                <p className="mt-1 text-sm font-black text-foreground">{editingOrg.clientNumber}</p>
+              </div>
+            ) : null}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="contact-name">Contact Person</Label>
+                <Input id="contact-name" value={contactName} onChange={(e) => setContactName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Contact Phone</Label>
+                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Contact Email</Label>
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tax-number">Tax / VAT Number</Label>
+                <Input id="tax-number" value={taxNumber} onChange={(e) => setTaxNumber(e.target.value)} />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="address">Physical Address</Label>
+                <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="billing-address">Billing Address</Label>
+                <Input id="billing-address" value={billingAddress} onChange={(e) => setBillingAddress(e.target.value)} />
+              </div>
             </div>
             {!editingOrg && (
               <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
@@ -235,8 +330,75 @@ export default function ExternalCompaniesPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={handleSave}>Save Company</Button>
+            <Button onClick={handleSave}>Save Client</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] max-w-4xl flex-col overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Client Booking History</DialogTitle>
+            <DialogDescription>
+              {historyClient?.clientNumber ? `${historyClient.clientNumber} · ` : ''}{historyClient?.name || 'Client'} — linked bookings, quote references, invoices, and flight records.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border bg-muted/20 px-3 py-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Linked Bookings</p>
+              <p className="mt-1 text-lg font-black">{isHistoryLoading ? '…' : clientHistory.length}</p>
+            </div>
+            <div className="rounded-lg border bg-muted/20 px-3 py-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Completed</p>
+              <p className="mt-1 text-lg font-black">{isHistoryLoading ? '…' : clientHistory.filter((booking) => booking.status === 'Completed').length}</p>
+            </div>
+            <div className="rounded-lg border bg-muted/20 px-3 py-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Recorded Value</p>
+              <p className="mt-1 text-lg font-black">{isHistoryLoading ? '…' : formatHistoryAmount(clientHistory.reduce((sum, booking) => sum + (booking.totalCost || 0), 0))}</p>
+            </div>
+          </div>
+
+          <ScrollArea className="min-h-0 flex-1 pr-3">
+            {isHistoryLoading ? (
+              <div className="grid gap-3">
+                <Skeleton className="h-28 w-full" />
+                <Skeleton className="h-28 w-full" />
+              </div>
+            ) : clientHistory.length === 0 ? (
+              <div className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
+                No bookings are currently linked to this client.
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {clientHistory.map((booking) => (
+                  <div key={booking.id} className="rounded-lg border bg-background p-3 shadow-none">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="font-black">{booking.bookingNumber}</p>
+                        <p className="text-xs text-muted-foreground">{booking.type} · {formatHistoryDate(booking.start || booking.date)}</p>
+                      </div>
+                      <span className="rounded-full border bg-muted/30 px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em]">{booking.status}</span>
+                    </div>
+                    <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                      <div><span className="font-bold text-muted-foreground">Mission</span><p>{booking.commercialDetails?.missionNumber || '—'}</p></div>
+                      <div><span className="font-bold text-muted-foreground">Quote</span><p>{booking.commercialDetails?.quoteReference || '—'}</p></div>
+                      <div><span className="font-bold text-muted-foreground">Invoice</span><p>{booking.invoiceReference || booking.accountingStatus || '—'}</p></div>
+                      <div><span className="font-bold text-muted-foreground">Recorded Value</span><p>{formatHistoryAmount(booking.totalCost)}</p></div>
+                    </div>
+                    <div className="mt-3 flex justify-end">
+                      <Button asChild variant="outline" size="sm" className="gap-1.5">
+                        <a href={`/bookings/history/${booking.id}`}>
+                          <Eye className="h-3.5 w-3.5" />
+                          View Booking
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>

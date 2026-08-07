@@ -73,6 +73,17 @@ export interface Aircraft {
     defects?: AircraftDefect[];
     organizationId?: string | null; // Associated external company ID
     hourlyRate?: number; // Added for accounting
+    operatingCostProfile?: {
+        currency?: string;
+        aircraftCostPerHour?: number;
+        fuelCostPerHour?: number;
+        maintenanceReservePerHour?: number;
+        crewCostPerHour?: number;
+        insuranceOverheadPerHour?: number;
+        landingFeesDefault?: number;
+        handlingFeesDefault?: number;
+        otherCostDefault?: number;
+    };
     fuelEnduranceHours?: number;
     documents?: {
         name: string;

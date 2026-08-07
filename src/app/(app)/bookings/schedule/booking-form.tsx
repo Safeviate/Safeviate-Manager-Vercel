@@ -24,6 +24,7 @@ import type { Aircraft } from '@/types/aircraft';
 import type { AircraftMaintenanceWindow } from '@/types/aircraft';
 import type { AircraftInspectionWarningSettings } from '@/types/inspection';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
+import type { ExternalOrganization } from '@/types/quality';
 import type { Booking, OverrideLog, TrainingRoute, ChecklistPhoto, PreFlightData } from '@/types/booking';
 import { Trash2, ShieldAlert, Lock, Eye, MapIcon, ClipboardCheck, Activity, CheckCircle2, PlaneTakeoff } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -37,13 +38,39 @@ import { getBlockingBookingForTracking, isBookingEligibleForTracking } from '@/l
 import { getAircraftHourSnapshot } from '@/lib/aircraft-hours';
 import type { DocumentExpirySettingsLike } from '@/lib/document-expiry';
 import { getAircraftBookingBlockState, getAircraftInspectionStatus } from '@/lib/aircraft-inspection';
+
+function getCharterCostDefaults(aircraft: Aircraft, startTime: string, endTime: string) {
+    const [startHours, startMinutes] = startTime.split(':').map(Number);
+    const [endHours, endMinutes] = endTime.split(':').map(Number);
+    const durationHours = Math.max(0, ((endHours * 60 + endMinutes) - (startHours * 60 + startMinutes)) / 60);
+    const profile = aircraft.operatingCostProfile;
+    const aircraftCostPerHour = (profile?.aircraftCostPerHour || 0) + (profile?.maintenanceReservePerHour || 0) + (profile?.insuranceOverheadPerHour || 0);
+    return {
+        costingCurrency: profile?.currency || 'ZAR',
+        aircraftCost: aircraftCostPerHour * durationHours,
+        fuelCost: (profile?.fuelCostPerHour || 0) * durationHours,
+        crewCost: (profile?.crewCostPerHour || 0) * durationHours,
+        landingFees: profile?.landingFeesDefault || 0,
+        handlingCost: profile?.handlingFeesDefault || 0,
+        otherCost: profile?.otherCostDefault || 0,
+    };
+}
 import { DEFAULT_TRAINING_EXERCISE_TEMPLATE_KEY, getTrainingExerciseTemplate, getTrainingExerciseTemplateOptions, resolveTrainingExerciseTemplates } from '@/lib/training-exercise-templates';
+import { getBookingOperationProfile, isCommercialBooking as isCommercialBookingRecord } from '@/lib/booking-profile';
 
 const parseLocalDate = (value?: string | null) => {
     if (!value) return undefined;
     const [year, month, day] = value.split('-').map(Number);
     if (!year || !month || !day) return undefined;
-    return new Date(year, month - 1, day, 12);
+    const parsed = new Date(year, month - 1, day, 12);
+    return parsed.getFullYear() === year && parsed.getMonth() === month - 1 && parsed.getDate() === day
+        ? parsed
+        : undefined;
+};
+
+const formatLocalDateValue = (value?: Date | string | null) => {
+    const parsed = value instanceof Date ? value : typeof value === 'string' ? parseLocalDate(value) : undefined;
+    return parsed && !Number.isNaN(parsed.getTime()) ? format(parsed, 'yyyy-MM-dd') : '';
 };
 
 const combineLocalDateAndTime = (date: Date, time: string) => {
@@ -98,6 +125,26 @@ const bookingFormSchema = z.object({
     cancellationReason: z.string().optional(),
     routeId: z.string().optional(),
     trainingExerciseTemplateKey: z.string().optional(),
+    missionNumber: z.string().optional(),
+    organizationId: z.string().optional(),
+    customerName: z.string().optional(),
+    commercialOperationType: z.enum(['Charter', 'Corporate', 'Ferry', 'Positioning', 'Rental']).optional(),
+    commercialTripStatus: z.enum(['Draft', 'Quoted', 'Confirmed', 'Released', 'Dispatched', 'Airborne', 'Arrived', 'Completed', 'Cancelled']).optional(),
+    passengerCount: z.coerce.number().int().min(0).optional(),
+    specialRequirements: z.string().optional(),
+    quoteReference: z.string().optional(),
+    accountingStatus: z.enum(['Unbilled', 'Exported', 'Paid']).optional(),
+    invoiceReference: z.string().optional(),
+    totalCost: z.coerce.number().min(0).optional(),
+    costingCurrency: z.string().max(8).optional(),
+    quotedAmount: z.coerce.number().min(0).optional(),
+    finalAmount: z.coerce.number().min(0).optional(),
+    aircraftCost: z.coerce.number().min(0).optional(),
+    fuelCost: z.coerce.number().min(0).optional(),
+    landingFees: z.coerce.number().min(0).optional(),
+    crewCost: z.coerce.number().min(0).optional(),
+    handlingCost: z.coerce.number().min(0).optional(),
+    otherCost: z.coerce.number().min(0).optional(),
 })
 .refine(data => {
     const start = new Date(`${format(data.date, 'yyyy-MM-dd')}T${data.startTime}`);
@@ -188,6 +235,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
 
     // Fetch Training Routes
     const [trainingRoutes, setTrainingRoutes] = useState<TrainingRoute[]>([]);
+    const [clientOrganizations, setClientOrganizations] = useState<ExternalOrganization[]>([]);
     useEffect(() => {
         let cancelled = false;
         const loadRoutes = async () => {
@@ -200,6 +248,23 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
         };
 
         void loadRoutes();
+        return () => {
+            cancelled = true;
+        };
+    }, [tenantId]);
+
+    useEffect(() => {
+        let cancelled = false;
+        const loadClients = async () => {
+            if (!tenantId) return;
+            const response = await fetch('/api/external-organizations', { cache: 'no-store' });
+            const payload = await response.json().catch(() => ({ organizations: [] }));
+            if (!cancelled) {
+                setClientOrganizations(Array.isArray(payload.organizations) ? payload.organizations : []);
+            }
+        };
+
+        void loadClients();
         return () => {
             cancelled = true;
         };
@@ -240,12 +305,45 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
         status: existingBooking?.status || 'Confirmed',
         cancellationReason: '',
         trainingExerciseTemplateKey: existingBooking?.trainingExerciseTemplateKey || DEFAULT_TRAINING_EXERCISE_TEMPLATE_KEY,
+        missionNumber: existingBooking?.commercialDetails?.missionNumber || '',
+        organizationId: existingBooking?.organizationId || '',
+        customerName: existingBooking?.commercialDetails?.customerName || '',
+        commercialOperationType: existingBooking?.commercialDetails?.operationType || (existingBooking?.type === 'Charter' ? 'Charter' : existingBooking?.type === 'Ferry Flight' ? 'Ferry' : existingBooking?.type === 'Rental' ? 'Rental' : undefined),
+        commercialTripStatus: existingBooking?.commercialDetails?.tripStatus || 'Draft',
+        passengerCount: existingBooking?.commercialDetails?.passengerCount ?? 0,
+        specialRequirements: existingBooking?.commercialDetails?.specialRequirements || '',
+        quoteReference: existingBooking?.commercialDetails?.quoteReference || '',
+        accountingStatus: existingBooking?.accountingStatus || 'Unbilled',
+        invoiceReference: existingBooking?.invoiceReference || '',
+        totalCost: existingBooking?.totalCost ?? undefined,
+        costingCurrency: existingBooking?.commercialDetails?.charterCosting?.currency || 'ZAR',
+        quotedAmount: existingBooking?.commercialDetails?.charterCosting?.quotedAmount ?? undefined,
+        finalAmount: existingBooking?.commercialDetails?.charterCosting?.finalAmount ?? existingBooking?.totalCost ?? undefined,
+        aircraftCost: existingBooking?.commercialDetails?.charterCosting?.aircraftCost ?? undefined,
+        fuelCost: existingBooking?.commercialDetails?.charterCosting?.fuelCost ?? undefined,
+        landingFees: existingBooking?.commercialDetails?.charterCosting?.landingFees ?? undefined,
+        crewCost: existingBooking?.commercialDetails?.charterCosting?.crewCost ?? undefined,
+        handlingCost: existingBooking?.commercialDetails?.charterCosting?.handlingCost ?? undefined,
+        otherCost: existingBooking?.commercialDetails?.charterCosting?.otherCost ?? undefined,
     }), [existingBooking, startTime]);
     
     const form = useForm<z.infer<typeof bookingFormSchema>>({
         resolver: zodResolver(bookingFormSchema),
         defaultValues,
     });
+
+    const selectedCommercialOperationType = form.watch('commercialOperationType');
+    useEffect(() => {
+        if (selectedCommercialOperationType !== 'Charter' || existingBooking) return;
+        const defaults = getCharterCostDefaults(aircraft, form.getValues('startTime'), form.getValues('endTime'));
+        const fields = ['aircraftCost', 'fuelCost', 'crewCost', 'landingFees', 'handlingCost', 'otherCost'] as const;
+        fields.forEach((fieldName) => {
+            if (form.getValues(fieldName) === undefined || form.getValues(fieldName) === 0) {
+                form.setValue(fieldName, defaults[fieldName]);
+            }
+        });
+        if (!form.getValues('costingCurrency')) form.setValue('costingCurrency', defaults.costingCurrency);
+    }, [aircraft, existingBooking, form, selectedCommercialOperationType]);
     
     useEffect(() => {
         if (isOpen) {
@@ -270,6 +368,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     const watchStatus = form.watch('status');
     const watchType = form.watch('type');
     const isTrainingBooking = watchType === 'Training Flight';
+    const isCommercialBooking = ['Rental', 'Charter', 'Ferry Flight'].includes(watchType);
     const isMaintenanceBooking = watchType === 'Maintenance';
     const isNonInstructorBooking = ['Rental', 'Charter', 'Ferry Flight', 'Maintenance'].includes(watchType);
     const showInstructorField = !isMaintenanceBooking && !isNonInstructorBooking;
@@ -293,6 +392,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
 
         const startIso = newStart.toISOString();
         const endIso = newEnd.toISOString();
+        const selectedClient = data.organizationId ? clientOrganizations.find((client) => client.id === data.organizationId) : undefined;
 
         if (data.type === 'Maintenance') {
             const toDate = data.overnightBookingDate ? format(data.overnightBookingDate, 'yyyy-MM-dd') : format(data.date, 'yyyy-MM-dd');
@@ -400,6 +500,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
         const bookingData: BookingDraft = {
             aircraftId: aircraft.id,
             type: data.type,
+            operationProfile: getBookingOperationProfile({ type: data.type }),
             trainingExerciseTemplateKey: data.type === 'Training Flight' ? data.trainingExerciseTemplateKey || DEFAULT_TRAINING_EXERCISE_TEMPLATE_KEY : undefined,
             trainingExerciseLabel: data.type === 'Training Flight'
                 ? getTrainingExerciseTemplate(data.trainingExerciseTemplateKey || DEFAULT_TRAINING_EXERCISE_TEMPLATE_KEY, trainingExerciseTemplates)?.label
@@ -415,7 +516,41 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             status: data.status,
             notes: data.notes || null,
             isOvernight: data.isOvernight,
+            organizationId: isCommercialBookingRecord({ type: data.type }) ? data.organizationId || null : existingBooking?.organizationId || null,
+            accountingStatus: isCommercialBookingRecord({ type: data.type }) ? data.accountingStatus : existingBooking?.accountingStatus,
+            invoiceReference: isCommercialBookingRecord({ type: data.type }) ? data.invoiceReference?.trim() || undefined : existingBooking?.invoiceReference,
+            totalCost: isCommercialBookingRecord({ type: data.type }) ? data.totalCost : existingBooking?.totalCost,
+            commercialDetails: isCommercialBookingRecord({ type: data.type })
+                ? {
+                    ...(existingBooking?.commercialDetails || {}),
+                    missionNumber: data.missionNumber?.trim() || undefined,
+                    clientNumber: selectedClient?.clientNumber || existingBooking?.commercialDetails?.clientNumber || undefined,
+                    customerName: selectedClient?.name || data.customerName?.trim() || undefined,
+                    operationType: data.commercialOperationType,
+                    tripStatus: data.commercialTripStatus,
+                    passengerCount: data.passengerCount ?? 0,
+                    specialRequirements: data.specialRequirements?.trim() || undefined,
+                    quoteReference: data.quoteReference?.trim() || undefined,
+                    charterCosting: data.commercialOperationType === 'Charter'
+                        ? {
+                            currency: data.costingCurrency?.trim().toUpperCase() || 'ZAR',
+                            quotedAmount: data.quotedAmount,
+                            finalAmount: data.finalAmount,
+                            aircraftCost: data.aircraftCost,
+                            fuelCost: data.fuelCost,
+                            landingFees: data.landingFees,
+                            crewCost: data.crewCost,
+                            handlingCost: data.handlingCost,
+                            otherCost: data.otherCost,
+                        }
+                        : existingBooking?.commercialDetails?.charterCosting,
+                }
+                : undefined,
         };
+
+        if (data.commercialOperationType === 'Charter' && typeof data.finalAmount === 'number') {
+            bookingData.totalCost = data.finalAmount;
+        }
 
         // Attach Training Route if selected
         if (data.routeId) {
@@ -561,7 +696,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent className="flex h-[calc(100dvh-0.75rem)] w-[calc(100vw-0.75rem)] max-w-3xl min-h-0 flex-col overflow-hidden p-4 sm:h-auto sm:w-full sm:p-6">
+            <DialogContent className="flex h-[calc(100dvh-0.75rem)] max-h-[calc(100dvh-0.75rem)] w-[calc(100vw-0.75rem)] max-w-3xl min-h-0 flex-col overflow-hidden p-4 sm:w-full sm:p-6">
                 <DialogHeader className="space-y-1 pb-2">
                     <DialogTitle className="text-base font-black uppercase tracking-tight sm:text-lg">{existingBooking ? `Booking #${existingBooking.bookingNumber}` : `New Booking for ${aircraft.tailNumber}`}</DialogTitle>
                     <DialogDescription className="text-xs sm:text-sm">
@@ -708,7 +843,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                                 <FormControl>
                                                     <Input
                                                         type="date"
-                                                        value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
+                                                        value={formatLocalDateValue(field.value)}
                                                         onChange={(e) => field.onChange(parseLocalDate(e.target.value))}
                                                         disabled={isLocked || !canEditBooking}
                                                     />
@@ -722,7 +857,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                                 <FormControl>
                                                     <Input
                                                         type="date"
-                                                        value={field.value ? format(field.value, 'yyyy-MM-dd') : format(form.getValues('date'), 'yyyy-MM-dd')}
+                                                        value={formatLocalDateValue(field.value) || formatLocalDateValue(form.getValues('date'))}
                                                         onChange={e => field.onChange(parseLocalDate(e.target.value))}
                                                         disabled={isLocked || !canEditBooking}
                                                     />
@@ -883,6 +1018,79 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                         ) : null
                                     ) : null}
 
+                                    {isCommercialBooking ? (
+                                        <div className="rounded-xl border border-sky-200 bg-sky-50/40 p-3 space-y-3 sm:p-4 lg:col-span-2">
+                                            <p className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-sky-800">
+                                                <PlaneTakeoff className="h-3.5 w-3.5" /> Commercial Trip Profile
+                                            </p>
+                                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                                <FormField control={form.control} name="missionNumber" render={({ field }) => (
+                                                    <FormItem><FormLabel className="text-[8px] font-black uppercase">Mission / Trip Number</FormLabel><FormControl><Input placeholder="e.g. OPS-2026-0042" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem>
+                                                )} />
+                                                <FormField control={form.control} name="organizationId" render={({ field }) => (
+                                                    <FormItem><FormLabel className="text-[8px] font-black uppercase">Client</FormLabel><Select onValueChange={field.onChange} value={field.value || ''} disabled={isLocked || !canEditBooking}><FormControl><SelectTrigger className="h-9 bg-background"><SelectValue placeholder="Select client" /></SelectTrigger></FormControl><SelectContent>{clientOrganizations.length > 0 ? clientOrganizations.map((client) => <SelectItem key={client.id} value={client.id}>{client.clientNumber || 'Pending'} • {client.name}</SelectItem>) : <SelectItem value="__none__" disabled>No clients available</SelectItem>}</SelectContent></Select><FormMessage /></FormItem>
+                                                )} />
+                                                <FormField control={form.control} name="commercialOperationType" render={({ field }) => (
+                                                    <FormItem><FormLabel className="text-[8px] font-black uppercase">Operation Profile</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isLocked || !canEditBooking}><FormControl><SelectTrigger className="h-9 bg-background"><SelectValue placeholder="Select profile" /></SelectTrigger></FormControl><SelectContent>{['Charter', 'Corporate', 'Ferry', 'Positioning', 'Rental'].map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                                                )} />
+                                                <FormField control={form.control} name="commercialTripStatus" render={({ field }) => (
+                                                    <FormItem><FormLabel className="text-[8px] font-black uppercase">Trip Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isLocked || !canEditBooking}><FormControl><SelectTrigger className="h-9 bg-background"><SelectValue placeholder="Select trip status" /></SelectTrigger></FormControl><SelectContent>{['Draft', 'Quoted', 'Confirmed', 'Released', 'Dispatched', 'Airborne', 'Arrived', 'Completed', 'Cancelled'].map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                                                )} />
+                                                <FormField control={form.control} name="passengerCount" render={({ field }) => (
+                                                    <FormItem><FormLabel className="text-[8px] font-black uppercase">Passenger Count</FormLabel><FormControl><Input type="number" min={0} {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem>
+                                                )} />
+                                                <FormField control={form.control} name="quoteReference" render={({ field }) => (
+                                                    <FormItem><FormLabel className="text-[8px] font-black uppercase">Quote Reference</FormLabel><FormControl><Input placeholder="Optional quote or contract reference" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem>
+                                                )} />
+                                                <FormField control={form.control} name="accountingStatus" render={({ field }) => (
+                                                    <FormItem><FormLabel className="text-[8px] font-black uppercase">Accounting Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isLocked || !canEditBooking}><FormControl><SelectTrigger className="h-9 bg-background"><SelectValue placeholder="Select accounting status" /></SelectTrigger></FormControl><SelectContent>{['Unbilled', 'Exported', 'Paid'].map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                                                )} />
+                                                <FormField control={form.control} name="invoiceReference" render={({ field }) => (
+                                                    <FormItem><FormLabel className="text-[8px] font-black uppercase">Invoice Reference</FormLabel><FormControl><Input placeholder="Optional invoice number" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem>
+                                                )} />
+                                                <FormField control={form.control} name="totalCost" render={({ field }) => (
+                                                    <FormItem><FormLabel className="text-[8px] font-black uppercase">Recorded Charge</FormLabel><FormControl><Input type="number" min={0} step="0.01" placeholder="0.00" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem>
+                                                )} />
+                                            </div>
+                                            {selectedCommercialOperationType === 'Charter' ? (
+                                                <div className="space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+                                                    <div>
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-emerald-800">Charter Costing</p>
+                                                        <p className="text-xs text-emerald-900/70">Record the client charge and direct operating costs. Margin is calculated when the booking is saved.</p>
+                                                    </div>
+                                                    <div className="grid gap-3 sm:grid-cols-3">
+                                                        <FormField control={form.control} name="costingCurrency" render={({ field }) => (
+                                                            <FormItem><FormLabel className="text-[8px] font-black uppercase">Currency</FormLabel><FormControl><Input placeholder="ZAR" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
+                                                        <FormField control={form.control} name="quotedAmount" render={({ field }) => (
+                                                            <FormItem><FormLabel className="text-[8px] font-black uppercase">Quoted Amount</FormLabel><FormControl><Input type="number" min={0} step="0.01" placeholder="0.00" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
+                                                        <FormField control={form.control} name="finalAmount" render={({ field }) => (
+                                                            <FormItem><FormLabel className="text-[8px] font-black uppercase">Final Client Charge</FormLabel><FormControl><Input type="number" min={0} step="0.01" placeholder="0.00" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
+                                                    </div>
+                                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                                        {([
+                                                            ['aircraftCost', 'Aircraft Cost'],
+                                                            ['fuelCost', 'Fuel Cost'],
+                                                            ['landingFees', 'Landing Fees'],
+                                                            ['crewCost', 'Crew Cost'],
+                                                            ['handlingCost', 'Handling Cost'],
+                                                            ['otherCost', 'Other Costs'],
+                                                        ] as const).map(([fieldName, label]) => (
+                                                            <FormField key={fieldName} control={form.control} name={fieldName} render={({ field }) => (
+                                                                <FormItem><FormLabel className="text-[8px] font-black uppercase">{label}</FormLabel><FormControl><Input type="number" min={0} step="0.01" placeholder="0.00" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem>
+                                                            )} />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ) : null}
+                                            <FormField control={form.control} name="specialRequirements" render={({ field }) => (
+                                                <FormItem><FormLabel className="text-[8px] font-black uppercase">Passenger / Client Requirements</FormLabel><FormControl><Textarea placeholder="Baggage, handling, catering, permissions or other trip requirements" {...field} disabled={isLocked || !canEditBooking} rows={2} /></FormControl><FormMessage /></FormItem>
+                                            )} />
+                                        </div>
+                                    ) : null}
+
                                     <FormField control={form.control} name="notes" render={({ field }) => (
                                         <FormItem className={cn('rounded-xl border bg-background p-3 shadow-sm sm:p-4', existingBooking || !isTrainingBooking ? 'lg:col-span-2' : '')}>
                                             <div className="space-y-1.5">
@@ -936,7 +1144,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
 
                                 {!isMaintenanceBooking && isOvernight && (
                                     <div className="grid grid-cols-1 gap-2 rounded-xl border p-3 sm:grid-cols-2">
-                                        <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem><FormLabel>Return Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(parseLocalDate(e.target.value))} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
+                                        <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem><FormLabel>Return Date</FormLabel><FormControl><Input type="date" {...field} value={formatLocalDateValue(field.value)} onChange={e => field.onChange(parseLocalDate(e.target.value))} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
                                         <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
                                     </div>
                                 )}

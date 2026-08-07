@@ -37,6 +37,7 @@ import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordin
 import { getAircraftHourSnapshot } from '@/lib/aircraft-hours';
 import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
 import { BookingPlannedLegsPanel } from '@/components/bookings/booking-planned-legs-panel';
+import { isCommercialBooking } from '@/lib/booking-profile';
 
 // Dynamic import for Leaflet to avoid SSR issues
 const AeronauticalMap = dynamic(
@@ -368,6 +369,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
     const aircraft = useMemo(() => aircrafts?.find(a => a.id === booking.aircraftId), [aircrafts, booking.aircraftId]);
     const isNonInstructorBooking = ['Rental', 'Charter', 'Ferry Flight', 'Maintenance'].includes(booking.type);
+    const isCommercialTrip = isCommercialBooking(booking);
     const instructorLabel = useMemo(() => {
         if (!booking.instructorId) return 'N/A';
         const instructor = personnel.find((person) => person.id === booking.instructorId);
@@ -379,6 +381,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         const student = personnel.find((person) => person.id === booking.studentId);
         return student ? `${student.firstName} ${student.lastName}` : booking.studentId;
     }, [personnel, booking.studentId]);
+    const coPilotLabel = useMemo(() => {
+        if (!booking.coPilotId) return 'N/A';
+        const coPilot = personnel.find((person) => person.id === booking.coPilotId);
+        return coPilot ? `${coPilot.firstName} ${coPilot.lastName}` : booking.coPilotId;
+    }, [personnel, booking.coPilotId]);
     const isAssignedInstructor = !!userProfile && booking.instructorId === userProfile.id;
     const canManuallyApprove = isAssignedInstructor || hasPermission('bookings-approve');
     const requiresPlanningAndNavlog = !!workflowCompletion.weatherPlanningNavlogRequired;
@@ -1115,7 +1122,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-1 flex-col">
                 <BookingDetailHeader
                     title={booking.type}
-                    subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId} • Inst: ${instructorLabel} • Stud: ${studentLabel}`}
+                    subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId} • ${isCommercialTrip ? `PIC: ${studentLabel} • SIC: ${coPilotLabel}` : `Inst: ${instructorLabel} • Stud: ${studentLabel}`}`}
                     status={booking.status}
                     approvalMeta={booking.approvedByName ? `Approved by ${booking.approvedByName}${booking.approvedAt ? ` • ${format(new Date(booking.approvedAt), "PPP p")}` : ""}` : null}
                     activeTab={activeTab}
@@ -1343,8 +1350,56 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                         <DetailItem label="End Time" value={formatDateSafe(booking.end, 'p')} />
                         {!isNonInstructorBooking ? <DetailItem label="Instructor" value={instructorLabel} /> : null}
                         <DetailItem label={isNonInstructorBooking ? 'Pilot in command' : 'Student'} value={studentLabel} />
+                        {isCommercialTrip ? <DetailItem label="Second in command" value={coPilotLabel} /> : null}
                                     </div>
                                 </div>
+
+                                {isCommercialTrip ? (
+                                    <div className="rounded-xl border border-sky-200 bg-sky-50/40 p-4 space-y-3">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <div>
+                                                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-sky-800">Commercial Trip Profile</p>
+                                                <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-sky-900/70">Operational and client reference</p>
+                                            </div>
+                                            {booking.commercialDetails?.tripStatus ? <Badge variant="outline" className="border-sky-300 bg-background text-[9px] font-black uppercase">{booking.commercialDetails.tripStatus}</Badge> : null}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+                                            <DetailItem label="Mission / Trip" value={booking.commercialDetails?.missionNumber} />
+                                            <DetailItem label="Client Number" value={booking.commercialDetails?.clientNumber} />
+                                            <DetailItem label="Customer / Organisation" value={booking.commercialDetails?.customerName} />
+                                            <DetailItem label="Operation Profile" value={booking.commercialDetails?.operationType || booking.type} />
+                                            <DetailItem label="Passengers" value={String(booking.commercialDetails?.passengerCount ?? 0)} />
+                                            <DetailItem label="Quote Reference" value={booking.commercialDetails?.quoteReference} />
+                                            <DetailItem label="Accounting Status" value={booking.accountingStatus} />
+                                            <DetailItem label="Invoice Reference" value={booking.invoiceReference} />
+                                            <DetailItem label="Recorded Charge" value={typeof booking.totalCost === 'number' ? booking.totalCost.toFixed(2) : undefined} />
+                                        </div>
+                                        {booking.commercialDetails?.operationType === 'Charter' && booking.commercialDetails.charterCosting ? (() => {
+                                            const costing = booking.commercialDetails.charterCosting;
+                                            const directCost = [costing.aircraftCost, costing.fuelCost, costing.landingFees, costing.crewCost, costing.handlingCost, costing.otherCost]
+                                                .reduce<number>((sum, value) => sum + (typeof value === 'number' ? value : 0), 0);
+                                            const finalAmount = costing.finalAmount ?? booking.totalCost;
+                                            const margin = typeof finalAmount === 'number' ? finalAmount - directCost : undefined;
+                                            return (
+                                                <div className="border-t border-sky-200 pt-3">
+                                                    <p className="text-[9px] font-black uppercase tracking-[0.18em] text-sky-800">Charter Costing ({costing.currency || 'ZAR'})</p>
+                                                    <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+                                                        <DetailItem label="Quoted Amount" value={typeof costing.quotedAmount === 'number' ? costing.quotedAmount.toFixed(2) : undefined} />
+                                                        <DetailItem label="Final Charge" value={typeof finalAmount === 'number' ? finalAmount.toFixed(2) : undefined} />
+                                                        <DetailItem label="Direct Operating Cost" value={directCost.toFixed(2)} />
+                                                        <DetailItem label="Gross Margin" value={typeof margin === 'number' ? margin.toFixed(2) : undefined} />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })() : null}
+                                        {booking.commercialDetails?.specialRequirements ? (
+                                            <div className="border-t border-sky-200 pt-3">
+                                                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">Passenger / Client Requirements</p>
+                                                <p className="mt-1 whitespace-pre-wrap text-[10px] font-medium leading-5 text-foreground">{booking.commercialDetails.specialRequirements}</p>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                ) : null}
 
                                 <div>
                                     <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">Notes</p>

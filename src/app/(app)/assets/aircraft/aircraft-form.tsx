@@ -22,6 +22,15 @@ const formSchema = z.object({
   currentTacho: z.coerce.number().min(0),
   tachoAtNext50Inspection: z.coerce.number().min(0),
   tachoAtNext100Inspection: z.coerce.number().min(0),
+  operatingCurrency: z.string().max(8),
+  aircraftCostPerHour: z.coerce.number().min(0),
+  fuelCostPerHour: z.coerce.number().min(0),
+  maintenanceReservePerHour: z.coerce.number().min(0),
+  crewCostPerHour: z.coerce.number().min(0),
+  insuranceOverheadPerHour: z.coerce.number().min(0),
+  landingFeesDefault: z.coerce.number().min(0),
+  handlingFeesDefault: z.coerce.number().min(0),
+  otherCostDefault: z.coerce.number().min(0),
 });
 
 interface AircraftFormProps {
@@ -48,6 +57,15 @@ export function AircraftForm({ tenantId, existingAircraft, onCancel, trigger }: 
       currentTacho: existingAircraft?.currentTacho ?? existingAircraft?.engineHours ?? 0,
       tachoAtNext50Inspection: existingAircraft?.tachoAtNext50Inspection ?? 50,
       tachoAtNext100Inspection: existingAircraft?.tachoAtNext100Inspection ?? 100,
+      operatingCurrency: existingAircraft?.operatingCostProfile?.currency || 'ZAR',
+      aircraftCostPerHour: existingAircraft?.operatingCostProfile?.aircraftCostPerHour ?? 0,
+      fuelCostPerHour: existingAircraft?.operatingCostProfile?.fuelCostPerHour ?? 0,
+      maintenanceReservePerHour: existingAircraft?.operatingCostProfile?.maintenanceReservePerHour ?? 0,
+      crewCostPerHour: existingAircraft?.operatingCostProfile?.crewCostPerHour ?? 0,
+      insuranceOverheadPerHour: existingAircraft?.operatingCostProfile?.insuranceOverheadPerHour ?? 0,
+      landingFeesDefault: existingAircraft?.operatingCostProfile?.landingFeesDefault ?? 0,
+      handlingFeesDefault: existingAircraft?.operatingCostProfile?.handlingFeesDefault ?? 0,
+      otherCostDefault: existingAircraft?.operatingCostProfile?.otherCostDefault ?? 0,
     },
   });
 
@@ -62,6 +80,17 @@ export function AircraftForm({ tenantId, existingAircraft, onCancel, trigger }: 
           components: existingAircraft?.components || [],
           documents: existingAircraft?.documents || [],
           organizationId: existingAircraft?.organizationId || tenantId,
+          operatingCostProfile: {
+            currency: values.operatingCurrency.trim().toUpperCase() || 'ZAR',
+            aircraftCostPerHour: values.aircraftCostPerHour,
+            fuelCostPerHour: values.fuelCostPerHour,
+            maintenanceReservePerHour: values.maintenanceReservePerHour,
+            crewCostPerHour: values.crewCostPerHour,
+            insuranceOverheadPerHour: values.insuranceOverheadPerHour,
+            landingFeesDefault: values.landingFeesDefault,
+            handlingFeesDefault: values.handlingFeesDefault,
+            otherCostDefault: values.otherCostDefault,
+          },
         },
       };
 
@@ -93,6 +122,29 @@ export function AircraftForm({ tenantId, existingAircraft, onCancel, trigger }: 
           <FormField control={form.control} name="model" render={({ field }) => (
             <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Model</FormLabel><FormControl><Input placeholder="e.g. 172" className="h-11 font-bold" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
+        </div>
+        <div className="space-y-4 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800">Operating Cost Profile</p>
+            <p className="mt-1 text-xs text-emerald-900/70">These values prefill charter estimates for this aircraft. They can still be overridden on an individual booking.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {([
+              ['operatingCurrency', 'Currency', 'ZAR'],
+              ['aircraftCostPerHour', 'Aircraft / hour', '0.00'],
+              ['fuelCostPerHour', 'Fuel / hour', '0.00'],
+              ['maintenanceReservePerHour', 'Maintenance reserve / hour', '0.00'],
+              ['crewCostPerHour', 'Crew / hour', '0.00'],
+              ['insuranceOverheadPerHour', 'Insurance / overhead / hour', '0.00'],
+              ['landingFeesDefault', 'Landing fees / trip', '0.00'],
+              ['handlingFeesDefault', 'Handling / trip', '0.00'],
+              ['otherCostDefault', 'Other / trip', '0.00'],
+            ] as const).map(([fieldName, label, placeholder]) => (
+              <FormField key={fieldName} control={form.control} name={fieldName} render={({ field }) => (
+                <FormItem><FormLabel className="text-[9px] font-black uppercase tracking-wider">{label}</FormLabel><FormControl><Input type={fieldName === 'operatingCurrency' ? 'text' : 'number'} min={fieldName === 'operatingCurrency' ? undefined : 0} step={fieldName === 'operatingCurrency' ? undefined : '0.01'} placeholder={placeholder} className="h-10" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+            ))}
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <FormField control={form.control} name="tailNumber" render={({ field }) => (

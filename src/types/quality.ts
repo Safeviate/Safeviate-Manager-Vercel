@@ -212,9 +212,14 @@ export interface QualityRiskPlanEntry {
 
 export interface ExternalOrganization {
     id: string;
+    clientNumber?: string;
     name: string;
+    contactName?: string;
     contactEmail?: string;
+    contactPhone?: string;
     address?: string;
+    billingAddress?: string;
+    taxNumber?: string;
 }
 
 export interface TabVisibilitySettings {

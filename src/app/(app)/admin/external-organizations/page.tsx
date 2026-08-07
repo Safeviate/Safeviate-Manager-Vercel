@@ -33,8 +33,12 @@ export default function ExternalOrganizationsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<ExternalOrganization | null>(null);
   const [name, setName] = useState('');
+  const [contactName, setContactName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [billingAddress, setBillingAddress] = useState('');
+  const [taxNumber, setTaxNumber] = useState('');
   const [copyCoherenceMatrix, setCopyCoherenceMatrix] = useState(true);
 
   const loadOrgs = useCallback(async () => {
@@ -61,8 +65,12 @@ export default function ExternalOrganizationsPage() {
     if (!canManage) return;
     setEditingOrg(org);
     setName(org?.name || '');
+    setContactName(org?.contactName || '');
     setEmail(org?.contactEmail || '');
+    setPhone(org?.contactPhone || '');
     setAddress(org?.address || '');
+    setBillingAddress(org?.billingAddress || '');
+    setTaxNumber(org?.taxNumber || '');
     setCopyCoherenceMatrix(!org);
     setIsFormOpen(true);
   };
@@ -76,7 +84,7 @@ export default function ExternalOrganizationsPage() {
 
     try {
         const payload = {
-          organization: { ...(editingOrg || {}), name, contactEmail: email, address },
+          organization: { ...(editingOrg || {}), name, contactName, contactEmail: email, contactPhone: phone, address, billingAddress, taxNumber },
           ...(editingOrg ? {} : { copyCoherenceMatrix }),
         };
         const response = await fetch(editingOrg ? `/api/external-organizations/${editingOrg.id}` : '/api/external-organizations', {
@@ -118,7 +126,7 @@ export default function ExternalOrganizationsPage() {
         <div className="min-w-0 space-y-1">
           <p className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">{org.name}</p>
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            External Company
+            {org.clientNumber || 'Client number pending'}
           </p>
         </div>
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border bg-background text-[10px] font-black uppercase text-muted-foreground">
@@ -128,12 +136,28 @@ export default function ExternalOrganizationsPage() {
       <CardContent className="space-y-4 px-4 py-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border bg-background px-3 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Client Number</p>
+            <p className="mt-1 break-words text-sm font-semibold text-foreground">{org.clientNumber || 'Pending assignment'}</p>
+          </div>
+          <div className="rounded-2xl border bg-background px-3 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Contact Person</p>
+            <p className="mt-1 break-words text-sm font-semibold text-foreground">{org.contactName || 'N/A'}</p>
+          </div>
+          <div className="rounded-2xl border bg-background px-3 py-3">
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Contact Email</p>
             <p className="mt-1 break-words text-sm font-semibold text-foreground">{org.contactEmail || 'N/A'}</p>
           </div>
           <div className="rounded-2xl border bg-background px-3 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Contact Phone</p>
+            <p className="mt-1 break-words text-sm font-semibold text-foreground">{org.contactPhone || 'N/A'}</p>
+          </div>
+          <div className="rounded-2xl border bg-background px-3 py-3">
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Address</p>
             <p className="mt-1 break-words text-sm font-semibold text-foreground">{org.address || 'N/A'}</p>
+          </div>
+          <div className="rounded-2xl border bg-background px-3 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Tax / VAT Number</p>
+            <p className="mt-1 break-words text-sm font-semibold text-foreground">{org.taxNumber || 'N/A'}</p>
           </div>
         </div>
 
@@ -167,7 +191,7 @@ export default function ExternalOrganizationsPage() {
               className={isMobile ? PAGE_FORMAT_MOBILE_DARK_BUTTON_CLASS : 'font-black uppercase text-[10px] h-9 tracking-tight'}
             >
               <span className="flex items-center gap-2">
-                <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'mr-2 h-4 w-4'} /> Add Organization
+                <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'mr-2 h-4 w-4'} /> Add Client
               </span>
               {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
             </Button>
@@ -199,21 +223,47 @@ export default function ExternalOrganizationsPage() {
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingOrg ? 'Edit' : 'Add'} Company</DialogTitle>
-            <DialogDescription>Define the details for the external company.</DialogDescription>
+            <DialogTitle>{editingOrg ? 'Edit' : 'Add'} Client</DialogTitle>
+            <DialogDescription>Maintain the client profile used by commercial bookings and accounting.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Company Name</Label>
+              <Label htmlFor="name">Client / Company Name</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Contact Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            {editingOrg?.clientNumber ? (
+              <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assigned Client Number</p>
+                <p className="mt-1 text-sm font-black text-foreground">{editingOrg.clientNumber}</p>
+              </div>
+            ) : null}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="contact-name">Contact Person</Label>
+                <Input id="contact-name" value={contactName} onChange={(e) => setContactName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Contact Phone</Label>
+                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Contact Email</Label>
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tax-number">Tax / VAT Number</Label>
+                <Input id="tax-number" value={taxNumber} onChange={(e) => setTaxNumber(e.target.value)} />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="address">Physical Address</Label>
+                <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="billing-address">Billing Address</Label>
+                <Input id="billing-address" value={billingAddress} onChange={(e) => setBillingAddress(e.target.value)} />
+              </div>
             </div>
             {!editingOrg && (
               <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
@@ -233,7 +283,7 @@ export default function ExternalOrganizationsPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={handleSave}>Save Company</Button>
+            <Button onClick={handleSave}>Save Client</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
