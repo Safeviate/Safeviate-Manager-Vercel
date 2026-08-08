@@ -538,7 +538,22 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                             finalAmount: data.finalAmount,
                             aircraftCost: data.aircraftCost,
                             fuelCost: data.fuelCost,
-                            landingFees: data.landingFees,
+                            landingFees: airportChargeTotal > 0
+                                || Boolean(data.departureIcao?.trim() || data.arrivalIcao?.trim())
+                                || data.departureLandingFee !== undefined
+                                || data.arrivalLandingFee !== undefined
+                                || data.parkingFee !== undefined
+                                || data.airportTaxes !== undefined
+                                ? airportChargeTotal
+                                : data.landingFees,
+                            airportCharges: {
+                                departureIcao: data.departureIcao?.trim().toUpperCase() || undefined,
+                                arrivalIcao: data.arrivalIcao?.trim().toUpperCase() || undefined,
+                                departureLandingFee: data.departureLandingFee,
+                                arrivalLandingFee: data.arrivalLandingFee,
+                                parkingFee: data.parkingFee,
+                                airportTaxes: data.airportTaxes,
+                            },
                             crewCost: data.crewCost,
                             handlingCost: data.handlingCost,
                             otherCost: data.otherCost,
