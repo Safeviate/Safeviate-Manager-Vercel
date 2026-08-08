@@ -191,7 +191,7 @@ export function AircraftForm({ tenantId, existingAircraft, onCancel, trigger }: 
       return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>{trigger}</DialogTrigger>
-          <DialogContent className="sm:max-w-[550px]">
+          <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-[550px]">
             <DialogHeader>
               <DialogTitle className="text-xl font-black uppercase tracking-tight">Edit Physical Asset</DialogTitle>
               <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Update the technical details for this aircraft.</DialogDescription>
@@ -213,7 +213,7 @@ export function AircraftForm({ tenantId, existingAircraft, onCancel, trigger }: 
           Add Aircraft
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-[550px]">
         <DialogHeader>
           <DialogTitle className="text-xl font-black uppercase tracking-tight">Add New Aircraft</DialogTitle>
           <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Enter the technical details for the new fleet asset.</DialogDescription>
