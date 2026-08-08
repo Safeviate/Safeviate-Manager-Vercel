@@ -47,6 +47,7 @@ type BookingBuckets = {
   training: EnrichedBooking[];
   rental: EnrichedBooking[];
   charter: EnrichedBooking[];
+  contract: EnrichedBooking[];
   ferry: EnrichedBooking[];
   maintenance: EnrichedBooking[];
   cancelled: EnrichedBooking[];
@@ -141,7 +142,7 @@ const BookingsTable = ({
               className="p-4"
               gridClassName="sm:grid-cols-2 xl:grid-cols-3"
               renderItem={(b) => {
-                const isNonInstructorBooking = ['Rental', 'Charter', 'Ferry Flight', 'Maintenance'].includes(b.type);
+                const isNonInstructorBooking = ['Rental', 'Charter', 'Contract', 'Ferry Flight', 'Maintenance'].includes(b.type);
                 const dateLabel = b.fullStartTime ? format(b.fullStartTime, 'PPP') : 'Invalid Date';
                 const crewLabel = [
                   b.creatorName ? `Creator: ${b.creatorName}` : '',
@@ -288,6 +289,7 @@ export default function BookingsHistoryPage() {
       training: activeBookings.filter((booking) => booking.type === 'Training Flight'),
       rental: activeBookings.filter((booking) => booking.type === 'Rental'),
       charter: activeBookings.filter((booking) => booking.type === 'Charter'),
+      contract: activeBookings.filter((booking) => booking.type === 'Contract'),
       ferry: activeBookings.filter((booking) => booking.type === 'Ferry Flight'),
       maintenance: activeBookings.filter((booking) => booking.type === 'Maintenance'),
       cancelled: enrichedBookings.filter(
@@ -305,6 +307,7 @@ export default function BookingsHistoryPage() {
     { value: 'training', label: 'Training' },
     { value: 'rental', label: 'Rental' },
     { value: 'charter', label: 'Charter' },
+    { value: 'contract', label: 'Contract' },
     { value: 'ferry', label: 'Ferry Flight' },
     { value: 'maintenance', label: 'Maintenance' },
     { value: 'cancelled', label: 'Cancelled' },
@@ -345,6 +348,7 @@ export default function BookingsHistoryPage() {
                     <TabsContent value="training" className='m-0 h-full min-h-0'><BookingsTable bookings={bookingBuckets.training} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
                     <TabsContent value="rental" className='m-0 h-full min-h-0'><BookingsTable bookings={bookingBuckets.rental} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
                     <TabsContent value="charter" className='m-0 h-full min-h-0'><BookingsTable bookings={bookingBuckets.charter} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
+                    <TabsContent value="contract" className='m-0 h-full min-h-0'><BookingsTable bookings={bookingBuckets.contract} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
                     <TabsContent value="ferry" className='m-0 h-full min-h-0'><BookingsTable bookings={bookingBuckets.ferry} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
                     <TabsContent value="maintenance" className='m-0 h-full min-h-0'><BookingsTable bookings={bookingBuckets.maintenance} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
                     <TabsContent value="cancelled" className='m-0 h-full min-h-0'><BookingsTable bookings={bookingBuckets.cancelled} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>

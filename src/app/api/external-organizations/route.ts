@@ -25,6 +25,54 @@ function formatClientNumber(sequence: number) {
   return `CLI-${String(sequence).padStart(5, '0')}`;
 }
 
+function getNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function buildBillingSummaries(rows: Array<{ data: unknown }>) {
+  const summaries = new Map<string, {
+    bookingCount: number;
+    invoiceCount: number;
+    quotedTotal: number;
+    billedTotal: number;
+    paidTotal: number;
+    outstandingTotal: number;
+    currency: string;
+  }>();
+
+  for (const row of rows) {
+    const booking = toRecord(row.data);
+    const organizationId = typeof booking.organizationId === 'string' ? booking.organizationId.trim() : '';
+    if (!organizationId) continue;
+
+    const details = toRecord(booking.commercialDetails);
+    const costing = toRecord(details.charterCosting);
+    const quotedAmount = getNumber(costing.quotedAmount);
+    const billedAmount = getNumber(costing.finalAmount) || getNumber(booking.totalCost);
+    const accountingStatus = String(booking.accountingStatus || 'Unbilled');
+    const current = summaries.get(organizationId) || {
+      bookingCount: 0,
+      invoiceCount: 0,
+      quotedTotal: 0,
+      billedTotal: 0,
+      paidTotal: 0,
+      outstandingTotal: 0,
+      currency: String(costing.currency || 'ZAR'),
+    };
+
+    current.bookingCount += 1;
+    current.invoiceCount += String(booking.invoiceReference || '').trim() ? 1 : 0;
+    current.quotedTotal += quotedAmount;
+    current.billedTotal += billedAmount;
+    current.paidTotal += accountingStatus === 'Paid' ? billedAmount : 0;
+    current.outstandingTotal += accountingStatus === 'Paid' ? 0 : billedAmount;
+    if (costing.currency) current.currency = String(costing.currency);
+    summaries.set(organizationId, current);
+  }
+
+  return summaries;
+}
+
 function allocateNextClientNumber(rows: Array<{ data: unknown }>) {
   const highest = rows.reduce((max, row) => Math.max(max, getClientNumber(toRecord(row.data).clientNumber)), 0);
   return formatClientNumber(highest + 1);
@@ -40,7 +88,7 @@ export async function GET(request: Request) {
     if (!tenantId) return NextResponse.json({ organizations: [] }, { status: 200 });
     await ensureExternalOrganizationsSchema();
 
-    const organizations = await prisma.$transaction(async (tx) => {
+    const { organizations, bookingRows } = await prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRawUnsafe<{ id: string; data: unknown }[]>(
         `SELECT id, data FROM external_organizations WHERE tenant_id = $1 ORDER BY created_at ASC FOR UPDATE`,
         tenantId
@@ -62,10 +110,25 @@ export async function GET(request: Request) {
         normalized.push(data);
       }
 
-      return normalized;
+      const bookingRows = await tx.bookingRecord.findMany({ where: { tenantId }, select: { data: true } });
+      return { organizations: normalized, bookingRows };
     });
 
-    return NextResponse.json({ organizations }, { status: 200 });
+    const billingSummaries = buildBillingSummaries(bookingRows);
+    const organizationsWithBilling = organizations.map((organization) => ({
+      ...organization,
+      billingSummary: billingSummaries.get(String(organization.id)) || {
+        bookingCount: 0,
+        invoiceCount: 0,
+        quotedTotal: 0,
+        billedTotal: 0,
+        paidTotal: 0,
+        outstandingTotal: 0,
+        currency: 'ZAR',
+      },
+    }));
+
+    return NextResponse.json({ organizations: organizationsWithBilling }, { status: 200 });
   } catch (error) {
     console.error('[external-organizations] fallback to empty list:', error);
     return NextResponse.json({ organizations: [] }, { status: 200 });

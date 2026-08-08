@@ -210,10 +210,36 @@ export interface QualityRiskPlanEntry {
     organizationId?: string | null;
 }
 
+export type ExternalOrganizationRole = 'Client' | 'External Supplier';
+
+export interface ExternalOrganizationRateCard {
+  currency: string;
+  hourlyRate?: number;
+  minimumHours?: number;
+  positioningRate?: number;
+  afterHoursRate?: number;
+  effectiveFrom?: string;
+  effectiveTo?: string;
+}
+
+export interface ExternalOrganizationBillingSummary {
+    bookingCount: number;
+    invoiceCount: number;
+    quotedTotal: number;
+    billedTotal: number;
+    paidTotal: number;
+    outstandingTotal: number;
+    currency: string;
+}
+
 export interface ExternalOrganization {
     id: string;
     clientNumber?: string;
     name: string;
+    roles?: ExternalOrganizationRole[];
+  auditRequired?: boolean;
+  rateCard?: ExternalOrganizationRateCard;
+    billingSummary?: ExternalOrganizationBillingSummary;
     contactName?: string;
     contactEmail?: string;
     contactPhone?: string;

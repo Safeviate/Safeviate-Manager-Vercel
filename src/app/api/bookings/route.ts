@@ -12,6 +12,7 @@ import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import type { AircraftInspectionWarningSettings } from '@/types/inspection';
+import { isCommercialBooking } from '@/lib/booking-profile';
 
 const SUPER_USERS = ['deanebolton@gmail.com', 'barry@safeviate.com'];
 
@@ -21,6 +22,17 @@ function isCompletedStatus(status: unknown) {
 
 function toStableJson(value: unknown) {
   return JSON.stringify(value ?? null);
+}
+
+function getBookingFinalAmount(data: Record<string, any>) {
+  const costing = data.commercialDetails?.charterCosting;
+  const finalAmount = typeof costing?.finalAmount === 'number' ? costing.finalAmount : data.totalCost;
+  return typeof finalAmount === 'number' && Number.isFinite(finalAmount) && finalAmount > 0 ? finalAmount : null;
+}
+
+function createInvoiceReference(data: Record<string, any>) {
+  const source = String(data.bookingNumber || data.id || 'booking').replace(/[^A-Za-z0-9-]/g, '').slice(-24);
+  return `INV-${new Date().getFullYear()}-${source}`;
 }
 
 function hasBookingSignatureMutation(existingData: Record<string, any> | null, incoming: Record<string, any>) {
@@ -321,10 +333,27 @@ export async function PUT(request: Request) {
       }
     }
 
-    const mergedData = {
+    let mergedData = {
       ...existingData,
       ...incoming,
     };
+
+    const finalAmount = getBookingFinalAmount(mergedData);
+    const shouldCreateInvoice = mergedData.status === 'Completed'
+      && isCommercialBooking({ type: mergedData.type, operationProfile: mergedData.operationProfile })
+      && typeof mergedData.organizationId === 'string'
+      && mergedData.organizationId.trim()
+      && finalAmount !== null
+      && !String(mergedData.invoiceReference || '').trim();
+
+    if (shouldCreateInvoice) {
+      mergedData = {
+        ...mergedData,
+        invoiceReference: createInvoiceReference(mergedData),
+        accountingStatus: 'Invoiced',
+        invoiceIssuedAt: new Date().toISOString(),
+      };
+    }
 
     await prisma.bookingRecord.update({
       where: { id: bookingId },

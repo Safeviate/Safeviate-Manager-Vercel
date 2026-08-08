@@ -13,7 +13,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ChevronsUpDown } from 'lucide-react';
 import { PAGE_FORMAT_MOBILE_DARK_BUTTON_CLASS } from '@/lib/page-format-buttons';
-import type { ExternalOrganization } from '@/types/quality';
+import type { ExternalOrganization, ExternalOrganizationRole } from '@/types/quality';
 import { DeleteActionButton, EditActionButton } from '@/components/record-action-buttons';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
@@ -39,6 +39,12 @@ export default function ExternalOrganizationsPage() {
   const [address, setAddress] = useState('');
   const [billingAddress, setBillingAddress] = useState('');
   const [taxNumber, setTaxNumber] = useState('');
+  const [roles, setRoles] = useState<ExternalOrganizationRole[]>(['Client']);
+  const [auditRequired, setAuditRequired] = useState(false);
+  const [rateCurrency, setRateCurrency] = useState('ZAR');
+  const [hourlyRate, setHourlyRate] = useState('');
+  const [minimumHours, setMinimumHours] = useState('');
+  const [positioningRate, setPositioningRate] = useState('');
   const [copyCoherenceMatrix, setCopyCoherenceMatrix] = useState(true);
 
   const loadOrgs = useCallback(async () => {
@@ -71,6 +77,12 @@ export default function ExternalOrganizationsPage() {
     setAddress(org?.address || '');
     setBillingAddress(org?.billingAddress || '');
     setTaxNumber(org?.taxNumber || '');
+    setRoles(org?.roles?.length ? org.roles : ['Client']);
+    setAuditRequired(org?.auditRequired === true);
+    setRateCurrency(org?.rateCard?.currency || 'ZAR');
+    setHourlyRate(org?.rateCard?.hourlyRate != null ? String(org.rateCard.hourlyRate) : '');
+    setMinimumHours(org?.rateCard?.minimumHours != null ? String(org.rateCard.minimumHours) : '');
+    setPositioningRate(org?.rateCard?.positioningRate != null ? String(org.rateCard.positioningRate) : '');
     setCopyCoherenceMatrix(!org);
     setIsFormOpen(true);
   };
@@ -81,10 +93,14 @@ export default function ExternalOrganizationsPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Organization name is required.' });
       return;
     }
+    if (roles.length === 0) {
+      toast({ variant: 'destructive', title: 'Role Required', description: 'Select Client, External Supplier, or both.' });
+      return;
+    }
 
     try {
         const payload = {
-          organization: { ...(editingOrg || {}), name, contactName, contactEmail: email, contactPhone: phone, address, billingAddress, taxNumber },
+          organization: { ...(editingOrg || {}), name, roles, auditRequired, contactName, contactEmail: email, contactPhone: phone, address, billingAddress, taxNumber, rateCard: { currency: rateCurrency.trim().toUpperCase() || 'ZAR', hourlyRate: Number(hourlyRate) || 0, minimumHours: Number(minimumHours) || 0, positioningRate: Number(positioningRate) || 0 } },
           ...(editingOrg ? {} : { copyCoherenceMatrix }),
         };
         const response = await fetch(editingOrg ? `/api/external-organizations/${editingOrg.id}` : '/api/external-organizations', {
@@ -128,13 +144,19 @@ export default function ExternalOrganizationsPage() {
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
             {org.clientNumber || 'Client number pending'}
           </p>
+          <div className="flex flex-wrap gap-1 pt-1">
+            {(org.roles?.length ? org.roles : ['Client']).map((role) => (
+              <span key={role} className="rounded-full border bg-background px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-muted-foreground">{role}</span>
+            ))}
+            {org.auditRequired ? <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-amber-800">Audit</span> : null}
+          </div>
         </div>
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border bg-background text-[10px] font-black uppercase text-muted-foreground">
           Org
         </div>
       </CardHeader>
       <CardContent className="space-y-4 px-4 py-4">
-        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border bg-background px-3 py-3">
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Client Number</p>
             <p className="mt-1 break-words text-sm font-semibold text-foreground">{org.clientNumber || 'Pending assignment'}</p>
@@ -159,7 +181,25 @@ export default function ExternalOrganizationsPage() {
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Tax / VAT Number</p>
             <p className="mt-1 break-words text-sm font-semibold text-foreground">{org.taxNumber || 'N/A'}</p>
           </div>
-        </div>
+          </div>
+        {org.billingSummary ? (
+          <div className="rounded-2xl border bg-muted/20 px-3 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Commercial Billing</p>
+            <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div><p className="text-[10px] text-muted-foreground">Bookings</p><p className="text-sm font-black">{org.billingSummary.bookingCount}</p></div>
+              <div><p className="text-[10px] text-muted-foreground">Quoted</p><p className="text-sm font-black">{org.billingSummary.currency} {org.billingSummary.quotedTotal.toFixed(2)}</p></div>
+              <div><p className="text-[10px] text-muted-foreground">Billed</p><p className="text-sm font-black">{org.billingSummary.currency} {org.billingSummary.billedTotal.toFixed(2)}</p></div>
+              <div><p className="text-[10px] text-muted-foreground">Outstanding</p><p className="text-sm font-black">{org.billingSummary.currency} {org.billingSummary.outstandingTotal.toFixed(2)}</p></div>
+            </div>
+          </div>
+        ) : null}
+        {org.rateCard?.hourlyRate ? (
+          <div className="rounded-2xl border border-sky-200 bg-sky-50/40 px-3 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-sky-800">Active Client Rate Card</p>
+            <p className="mt-1 text-sm font-black">{org.rateCard.currency} {org.rateCard.hourlyRate.toFixed(2)} / hour</p>
+            <p className="text-xs text-muted-foreground">Minimum {org.rateCard.minimumHours || 0} hours{org.rateCard.positioningRate ? ` · Positioning ${org.rateCard.currency} ${org.rateCard.positioningRate.toFixed(2)}` : ''}</p>
+          </div>
+        ) : null}
 
         {canManage ? (
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -254,8 +294,39 @@ export default function ExternalOrganizationsPage() {
                 <Label htmlFor="tax-number">Tax / VAT Number</Label>
                 <Input id="tax-number" value={taxNumber} onChange={(e) => setTaxNumber(e.target.value)} />
               </div>
-            </div>
+          </div>
+          <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
+            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-sky-800">Client Rate Card</p><p className="mt-1 text-xs text-muted-foreground">These are client charges. Aircraft operating costs remain internal.</p></div>
             <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2"><Label htmlFor="rate-currency">Currency</Label><Input id="rate-currency" maxLength={8} value={rateCurrency} onChange={(e) => setRateCurrency(e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="hourly-rate">Aircraft hourly rate</Label><Input id="hourly-rate" type="number" min="0" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="minimum-hours">Minimum billable hours</Label><Input id="minimum-hours" type="number" min="0" step="0.1" value={minimumHours} onChange={(e) => setMinimumHours(e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="positioning-rate">Positioning rate</Label><Input id="positioning-rate" type="number" min="0" step="0.01" value={positioningRate} onChange={(e) => setPositioningRate(e.target.value)} /></div>
+            </div>
+          </div>
+          <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-foreground">Organisation Roles</p>
+              <p className="mt-1 text-xs text-muted-foreground">Select every role that applies. An organisation may be both a client and a supplier.</p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(['Client', 'External Supplier'] as const).map((role) => (
+                <label key={role} htmlFor={`organization-role-${role.toLowerCase().replace(' ', '-')}`} className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm font-medium">
+                  <Checkbox
+                    id={`organization-role-${role.toLowerCase().replace(' ', '-')}`}
+                    checked={roles.includes(role)}
+                    onCheckedChange={(checked) => setRoles((current) => checked ? Array.from(new Set([...current, role])) : current.filter((item) => item !== role))}
+                  />
+                  {role}
+                </label>
+              ))}
+            </div>
+            <label htmlFor="audit-required" className="flex items-start gap-2 rounded-md border bg-background px-3 py-2 text-sm font-medium">
+              <Checkbox id="audit-required" checked={auditRequired} onCheckedChange={(checked) => setAuditRequired(checked === true)} />
+              <span><span className="block">Subject to audit</span><span className="block text-xs font-normal text-muted-foreground">Include this organisation in audit and compliance workflows.</span></span>
+            </label>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="address">Physical Address</Label>
                 <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} />

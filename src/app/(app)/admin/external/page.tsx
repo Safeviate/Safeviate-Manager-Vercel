@@ -55,6 +55,10 @@ export default function ExternalCompaniesPage() {
   const [address, setAddress] = useState('');
   const [billingAddress, setBillingAddress] = useState('');
   const [taxNumber, setTaxNumber] = useState('');
+  const [rateCurrency, setRateCurrency] = useState('ZAR');
+  const [hourlyRate, setHourlyRate] = useState('');
+  const [minimumHours, setMinimumHours] = useState('');
+  const [positioningRate, setPositioningRate] = useState('');
   const [copyCoherenceMatrix, setCopyCoherenceMatrix] = useState(true);
   const [historyClient, setHistoryClient] = useState<ExternalOrganization | null>(null);
   const [clientHistory, setClientHistory] = useState<Booking[]>([]);
@@ -94,6 +98,10 @@ export default function ExternalCompaniesPage() {
     setAddress(org?.address || '');
     setBillingAddress(org?.billingAddress || '');
     setTaxNumber(org?.taxNumber || '');
+    setRateCurrency(org?.rateCard?.currency || 'ZAR');
+    setHourlyRate(org?.rateCard?.hourlyRate != null ? String(org.rateCard.hourlyRate) : '');
+    setMinimumHours(org?.rateCard?.minimumHours != null ? String(org.rateCard.minimumHours) : '');
+    setPositioningRate(org?.rateCard?.positioningRate != null ? String(org.rateCard.positioningRate) : '');
     setCopyCoherenceMatrix(!org);
     setIsFormOpen(true);
   };
@@ -116,6 +124,7 @@ export default function ExternalCompaniesPage() {
           address,
           billingAddress,
           taxNumber,
+          rateCard: { currency: rateCurrency.trim().toUpperCase() || 'ZAR', hourlyRate: Number(hourlyRate) || 0, minimumHours: Number(minimumHours) || 0, positioningRate: Number(positioningRate) || 0 },
         };
         const response = await fetch(editingOrg ? `/api/external-organizations/${editingOrg.id}` : '/api/external-organizations', {
           method: editingOrg ? 'PATCH' : 'POST',
@@ -300,6 +309,15 @@ export default function ExternalCompaniesPage() {
               <div className="space-y-2">
                 <Label htmlFor="tax-number">Tax / VAT Number</Label>
                 <Input id="tax-number" value={taxNumber} onChange={(e) => setTaxNumber(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
+              <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-sky-800">Client Rate Card</p><p className="mt-1 text-xs text-muted-foreground">Client charges are separate from the aircraft’s internal operating costs.</p></div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2"><Label htmlFor="rate-currency">Currency</Label><Input id="rate-currency" maxLength={8} value={rateCurrency} onChange={(e) => setRateCurrency(e.target.value)} /></div>
+                <div className="space-y-2"><Label htmlFor="hourly-rate">Aircraft hourly rate</Label><Input id="hourly-rate" type="number" min="0" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} /></div>
+                <div className="space-y-2"><Label htmlFor="minimum-hours">Minimum billable hours</Label><Input id="minimum-hours" type="number" min="0" step="0.1" value={minimumHours} onChange={(e) => setMinimumHours(e.target.value)} /></div>
+                <div className="space-y-2"><Label htmlFor="positioning-rate">Positioning rate</Label><Input id="positioning-rate" type="number" min="0" step="0.01" value={positioningRate} onChange={(e) => setPositioningRate(e.target.value)} /></div>
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">

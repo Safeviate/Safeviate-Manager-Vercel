@@ -50,10 +50,20 @@ function getCharterCostDefaults(aircraft: Aircraft, startTime: string, endTime: 
         aircraftCost: aircraftCostPerHour * durationHours,
         fuelCost: (profile?.fuelCostPerHour || 0) * durationHours,
         crewCost: (profile?.crewCostPerHour || 0) * durationHours,
-        landingFees: profile?.landingFeesDefault || 0,
-        handlingCost: profile?.handlingFeesDefault || 0,
+        landingFees: undefined,
+        handlingCost: undefined,
         otherCost: profile?.otherCostDefault || 0,
     };
+}
+
+function getAirportChargeTotal(values: {
+    departureLandingFee?: number;
+    arrivalLandingFee?: number;
+    parkingFee?: number;
+    airportTaxes?: number;
+}): number {
+    return [values.departureLandingFee, values.arrivalLandingFee, values.parkingFee, values.airportTaxes]
+        .reduce<number>((total, value) => total + (typeof value === 'number' ? value : 0), 0);
 }
 import { DEFAULT_TRAINING_EXERCISE_TEMPLATE_KEY, getTrainingExerciseTemplate, getTrainingExerciseTemplateOptions, resolveTrainingExerciseTemplates } from '@/lib/training-exercise-templates';
 import { getBookingOperationProfile, isCommercialBooking as isCommercialBookingRecord } from '@/lib/booking-profile';
@@ -105,6 +115,7 @@ const BOOKING_TYPE_OPTIONS = [
     'Training Flight',
     'Rental',
     'Charter',
+    'Contract',
     'Ferry Flight',
     'Maintenance',
 ] as const;
@@ -133,7 +144,7 @@ const bookingFormSchema = z.object({
     passengerCount: z.coerce.number().int().min(0).optional(),
     specialRequirements: z.string().optional(),
     quoteReference: z.string().optional(),
-    accountingStatus: z.enum(['Unbilled', 'Exported', 'Paid']).optional(),
+    accountingStatus: z.enum(['Unbilled', 'Invoiced', 'Exported', 'Paid']).optional(),
     invoiceReference: z.string().optional(),
     totalCost: z.coerce.number().min(0).optional(),
     costingCurrency: z.string().max(8).optional(),
@@ -142,6 +153,12 @@ const bookingFormSchema = z.object({
     aircraftCost: z.coerce.number().min(0).optional(),
     fuelCost: z.coerce.number().min(0).optional(),
     landingFees: z.coerce.number().min(0).optional(),
+    departureIcao: z.string().max(4).optional(),
+    arrivalIcao: z.string().max(4).optional(),
+    departureLandingFee: z.coerce.number().min(0).optional(),
+    arrivalLandingFee: z.coerce.number().min(0).optional(),
+    parkingFee: z.coerce.number().min(0).optional(),
+    airportTaxes: z.coerce.number().min(0).optional(),
     crewCost: z.coerce.number().min(0).optional(),
     handlingCost: z.coerce.number().min(0).optional(),
     otherCost: z.coerce.number().min(0).optional(),
@@ -193,6 +210,8 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const canEditBooking = hasPermission('bookings-schedule-manage');
+    const canViewAccounting = hasPermission('accounting-view') || hasPermission('accounting-edit') || hasPermission('accounting-manage');
+    const canEditAccounting = hasPermission('accounting-edit') || hasPermission('accounting-manage');
     const aircraftSnapshot = useMemo<PreFlightData>(() => getAircraftHourSnapshot(aircraft), [aircraft]);
     const inspectionSettings = useMemo(() => {
         const config = tenant as Record<string, unknown> | null | undefined;
@@ -322,6 +341,12 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
         aircraftCost: existingBooking?.commercialDetails?.charterCosting?.aircraftCost ?? undefined,
         fuelCost: existingBooking?.commercialDetails?.charterCosting?.fuelCost ?? undefined,
         landingFees: existingBooking?.commercialDetails?.charterCosting?.landingFees ?? undefined,
+        departureIcao: existingBooking?.commercialDetails?.charterCosting?.airportCharges?.departureIcao || existingBooking?.navlog?.departureIcao || '',
+        arrivalIcao: existingBooking?.commercialDetails?.charterCosting?.airportCharges?.arrivalIcao || existingBooking?.navlog?.arrivalIcao || '',
+        departureLandingFee: existingBooking?.commercialDetails?.charterCosting?.airportCharges?.departureLandingFee ?? undefined,
+        arrivalLandingFee: existingBooking?.commercialDetails?.charterCosting?.airportCharges?.arrivalLandingFee ?? undefined,
+        parkingFee: existingBooking?.commercialDetails?.charterCosting?.airportCharges?.parkingFee ?? undefined,
+        airportTaxes: existingBooking?.commercialDetails?.charterCosting?.airportCharges?.airportTaxes ?? undefined,
         crewCost: existingBooking?.commercialDetails?.charterCosting?.crewCost ?? undefined,
         handlingCost: existingBooking?.commercialDetails?.charterCosting?.handlingCost ?? undefined,
         otherCost: existingBooking?.commercialDetails?.charterCosting?.otherCost ?? undefined,
@@ -333,10 +358,15 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     });
 
     const selectedCommercialOperationType = form.watch('commercialOperationType');
+    const departureLandingFee = form.watch('departureLandingFee');
+    const arrivalLandingFee = form.watch('arrivalLandingFee');
+    const parkingFee = form.watch('parkingFee');
+    const airportTaxes = form.watch('airportTaxes');
+    const airportChargeTotal = getAirportChargeTotal({ departureLandingFee, arrivalLandingFee, parkingFee, airportTaxes });
     useEffect(() => {
         if (selectedCommercialOperationType !== 'Charter' || existingBooking) return;
         const defaults = getCharterCostDefaults(aircraft, form.getValues('startTime'), form.getValues('endTime'));
-        const fields = ['aircraftCost', 'fuelCost', 'crewCost', 'landingFees', 'handlingCost', 'otherCost'] as const;
+        const fields = ['aircraftCost', 'fuelCost', 'crewCost', 'otherCost'] as const;
         fields.forEach((fieldName) => {
             if (form.getValues(fieldName) === undefined || form.getValues(fieldName) === 0) {
                 form.setValue(fieldName, defaults[fieldName]);
@@ -367,11 +397,24 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     const isOvernight = form.watch('isOvernight');
     const watchStatus = form.watch('status');
     const watchType = form.watch('type');
+    const watchedOrganizationId = form.watch('organizationId');
     const isTrainingBooking = watchType === 'Training Flight';
-    const isCommercialBooking = ['Rental', 'Charter', 'Ferry Flight'].includes(watchType);
+    const isCommercialBooking = ['Rental', 'Charter', 'Contract', 'Ferry Flight'].includes(watchType);
     const isMaintenanceBooking = watchType === 'Maintenance';
-    const isNonInstructorBooking = ['Rental', 'Charter', 'Ferry Flight', 'Maintenance'].includes(watchType);
+    const isNonInstructorBooking = ['Rental', 'Charter', 'Contract', 'Ferry Flight', 'Maintenance'].includes(watchType);
     const showInstructorField = !isMaintenanceBooking && !isNonInstructorBooking;
+
+    useEffect(() => {
+        if (existingBooking || !watchedOrganizationId || !isCommercialBooking) return;
+        const rateCard = clientOrganizations.find((organization) => organization.id === watchedOrganizationId)?.rateCard;
+        if (!rateCard?.hourlyRate) return;
+        const start = form.getValues('startTime').split(':').map(Number);
+        const end = form.getValues('endTime').split(':').map(Number);
+        const durationHours = Math.max(0, ((end[0] * 60 + end[1]) - (start[0] * 60 + start[1])) / 60);
+        const billableHours = Math.max(durationHours, rateCard.minimumHours || 0);
+        form.setValue('quotedAmount', billableHours * rateCard.hourlyRate, { shouldDirty: true });
+        form.setValue('costingCurrency', rateCard.currency || 'ZAR', { shouldDirty: true });
+    }, [clientOrganizations, existingBooking, form, isCommercialBooking, watchedOrganizationId]);
     const studentFieldLabel = isNonInstructorBooking ? 'Pilot in Command' : 'Student';
     const studentSelectPlaceholder = isNonInstructorBooking ? 'Select Pilot in Command...' : 'Select Student...';
 
@@ -517,8 +560,8 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             notes: data.notes || null,
             isOvernight: data.isOvernight,
             organizationId: isCommercialBookingRecord({ type: data.type }) ? data.organizationId || null : existingBooking?.organizationId || null,
-            accountingStatus: isCommercialBookingRecord({ type: data.type }) ? data.accountingStatus : existingBooking?.accountingStatus,
-            invoiceReference: isCommercialBookingRecord({ type: data.type }) ? data.invoiceReference?.trim() || undefined : existingBooking?.invoiceReference,
+            accountingStatus: isCommercialBookingRecord({ type: data.type }) && canEditAccounting ? data.accountingStatus : existingBooking?.accountingStatus,
+            invoiceReference: isCommercialBookingRecord({ type: data.type }) && canEditAccounting ? data.invoiceReference?.trim() || undefined : existingBooking?.invoiceReference,
             totalCost: isCommercialBookingRecord({ type: data.type }) ? data.totalCost : existingBooking?.totalCost,
             commercialDetails: isCommercialBookingRecord({ type: data.type })
                 ? {
@@ -1057,52 +1100,27 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                                 <FormField control={form.control} name="quoteReference" render={({ field }) => (
                                                     <FormItem><FormLabel className="text-[8px] font-black uppercase">Quote Reference</FormLabel><FormControl><Input placeholder="Optional quote or contract reference" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem>
                                                 )} />
-                                                <FormField control={form.control} name="accountingStatus" render={({ field }) => (
-                                                    <FormItem><FormLabel className="text-[8px] font-black uppercase">Accounting Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isLocked || !canEditBooking}><FormControl><SelectTrigger className="h-9 bg-background"><SelectValue placeholder="Select accounting status" /></SelectTrigger></FormControl><SelectContent>{['Unbilled', 'Exported', 'Paid'].map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
-                                                )} />
-                                                <FormField control={form.control} name="invoiceReference" render={({ field }) => (
-                                                    <FormItem><FormLabel className="text-[8px] font-black uppercase">Invoice Reference</FormLabel><FormControl><Input placeholder="Optional invoice number" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem>
-                                                )} />
-                                                <FormField control={form.control} name="totalCost" render={({ field }) => (
-                                                    <FormItem><FormLabel className="text-[8px] font-black uppercase">Recorded Charge</FormLabel><FormControl><Input type="number" min={0} step="0.01" placeholder="0.00" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem>
-                                                )} />
                                             </div>
-                                            {selectedCommercialOperationType === 'Charter' ? (
-                                                <div className="space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
-                                                    <div>
-                                                        <p className="text-[9px] font-black uppercase tracking-widest text-emerald-800">Charter Costing</p>
-                                                        <p className="text-xs text-emerald-900/70">Record the client charge and direct operating costs. Margin is calculated when the booking is saved.</p>
-                                                    </div>
-                                                    <div className="grid gap-3 sm:grid-cols-3">
-                                                        <FormField control={form.control} name="costingCurrency" render={({ field }) => (
-                                                            <FormItem><FormLabel className="text-[8px] font-black uppercase">Currency</FormLabel><FormControl><Input placeholder="ZAR" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem>
-                                                        )} />
-                                                        <FormField control={form.control} name="quotedAmount" render={({ field }) => (
-                                                            <FormItem><FormLabel className="text-[8px] font-black uppercase">Quoted Amount</FormLabel><FormControl><Input type="number" min={0} step="0.01" placeholder="0.00" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem>
-                                                        )} />
-                                                        <FormField control={form.control} name="finalAmount" render={({ field }) => (
-                                                            <FormItem><FormLabel className="text-[8px] font-black uppercase">Final Client Charge</FormLabel><FormControl><Input type="number" min={0} step="0.01" placeholder="0.00" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem>
-                                                        )} />
-                                                    </div>
-                                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                                                        {([
-                                                            ['aircraftCost', 'Aircraft Cost'],
-                                                            ['fuelCost', 'Fuel Cost'],
-                                                            ['landingFees', 'Landing Fees'],
-                                                            ['crewCost', 'Crew Cost'],
-                                                            ['handlingCost', 'Handling Cost'],
-                                                            ['otherCost', 'Other Costs'],
-                                                        ] as const).map(([fieldName, label]) => (
-                                                            <FormField key={fieldName} control={form.control} name={fieldName} render={({ field }) => (
-                                                                <FormItem><FormLabel className="text-[8px] font-black uppercase">{label}</FormLabel><FormControl><Input type="number" min={0} step="0.01" placeholder="0.00" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem>
-                                                            )} />
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            ) : null}
                                             <FormField control={form.control} name="specialRequirements" render={({ field }) => (
                                                 <FormItem><FormLabel className="text-[8px] font-black uppercase">Passenger / Client Requirements</FormLabel><FormControl><Textarea placeholder="Baggage, handling, catering, permissions or other trip requirements" {...field} disabled={isLocked || !canEditBooking} rows={2} /></FormControl><FormMessage /></FormItem>
                                             )} />
+                                        </div>
+                                    ) : null}
+
+                                    {isCommercialBooking && canViewAccounting ? (
+                                        <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-3 space-y-3 sm:p-4 lg:col-span-2">
+                                            <p className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-amber-800">
+                                                <Lock className="h-3.5 w-3.5" /> Restricted Billing
+                                            </p>
+                                            <p className="text-xs text-amber-900/75">Invoice and accounting fields are visible only to authorised finance users.</p>
+                                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                                <FormField control={form.control} name="accountingStatus" render={({ field }) => (
+                                                    <FormItem><FormLabel className="text-[8px] font-black uppercase">Accounting Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isLocked || !canEditAccounting}><FormControl><SelectTrigger className="h-9 bg-background"><SelectValue placeholder="Select accounting status" /></SelectTrigger></FormControl><SelectContent>{['Unbilled', 'Invoiced', 'Exported', 'Paid'].map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                                                )} />
+                                                <FormField control={form.control} name="invoiceReference" render={({ field }) => (
+                                                    <FormItem><FormLabel className="text-[8px] font-black uppercase">Invoice Reference</FormLabel><FormControl><Input placeholder="System-generated invoice number" {...field} disabled={isLocked || !canEditAccounting} /></FormControl><FormMessage /></FormItem>
+                                                )} />
+                                            </div>
                                         </div>
                                     ) : null}
 

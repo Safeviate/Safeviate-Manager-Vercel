@@ -1,6 +1,6 @@
 import type { Booking, BookingOperationProfile } from '@/types/booking';
 
-const COMMERCIAL_BOOKING_TYPES = new Set(['Rental', 'Charter', 'Ferry Flight']);
+const COMMERCIAL_BOOKING_TYPES = new Set(['Rental', 'Charter', 'Contract', 'Ferry Flight']);
 
 export function getBookingOperationProfile(booking: Pick<Booking, 'type' | 'operationProfile'>): BookingOperationProfile {
     if (booking.operationProfile) return booking.operationProfile;

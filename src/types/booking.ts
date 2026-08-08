@@ -37,6 +37,14 @@ export interface CharterCosting {
     aircraftCost?: number;
     fuelCost?: number;
     landingFees?: number;
+    airportCharges?: {
+        departureIcao?: string;
+        arrivalIcao?: string;
+        departureLandingFee?: number;
+        arrivalLandingFee?: number;
+        parkingFee?: number;
+        airportTaxes?: number;
+    };
     crewCost?: number;
     handlingCost?: number;
     otherCost?: number;
@@ -210,7 +218,7 @@ export interface Booking {
   overrides?: OverrideLog[];
   landingConfirmed?: boolean;
   // Accounting fields
-  accountingStatus?: 'Unbilled' | 'Exported' | 'Paid';
+  accountingStatus?: 'Unbilled' | 'Invoiced' | 'Exported' | 'Paid';
   invoiceReference?: string;
   totalCost?: number;
 }

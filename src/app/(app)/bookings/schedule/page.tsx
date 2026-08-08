@@ -66,7 +66,7 @@ const BOOKING_CATEGORY_VIEWS = [
 const REQUIRED_CHECK_APPROVAL_KEYS = ['massAndBalance', 'navlog', 'preFlight', 'postFlight', 'photos', 'fuelUplift'] as const;
 
 const getBookingScheduleCategory = (booking: Booking): 'Training' | 'Commercial' =>
-    ['Charter', 'Ferry Flight'].includes(booking.type) ? 'Commercial' : 'Training';
+    ['Charter', 'Contract', 'Ferry Flight'].includes(booking.type) ? 'Commercial' : 'Training';
 
 const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
     if (!dateStr || !timeStr) {
@@ -171,7 +171,7 @@ const BookingItem = ({
     allBookingsForAircraft: Booking[];
     compact?: boolean;
 }) => {
-    const isNonInstructorBooking = ['Rental', 'Charter', 'Ferry Flight', 'Maintenance'].includes(booking.type);
+    const isNonInstructorBooking = ['Rental', 'Charter', 'Contract', 'Ferry Flight', 'Maintenance'].includes(booking.type);
     const compactCrewLabel = isNonInstructorBooking
         ? `PIC ${booking.studentId ? (peopleMap.get(booking.studentId) || booking.studentId) : 'N/A'} · Co-pilot ${booking.coPilotId ? (peopleMap.get(booking.coPilotId) || booking.coPilotId) : 'N/A'}`
         : `Inst ${booking.instructorId ? (peopleMap.get(booking.instructorId) || booking.instructorId) : 'N/A'} · Stud ${booking.studentId ? (peopleMap.get(booking.studentId) || booking.studentId) : 'N/A'}`;

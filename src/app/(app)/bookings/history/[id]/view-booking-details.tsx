@@ -368,7 +368,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const [workflowApprovals, setWorkflowApprovals] = useState<BookingWorkflowApprovals>(booking.workflowApprovals || {});
 
     const aircraft = useMemo(() => aircrafts?.find(a => a.id === booking.aircraftId), [aircrafts, booking.aircraftId]);
-    const isNonInstructorBooking = ['Rental', 'Charter', 'Ferry Flight', 'Maintenance'].includes(booking.type);
+    const isNonInstructorBooking = ['Rental', 'Charter', 'Contract', 'Ferry Flight', 'Maintenance'].includes(booking.type);
     const isCommercialTrip = isCommercialBooking(booking);
     const instructorLabel = useMemo(() => {
         if (!booking.instructorId) return 'N/A';
