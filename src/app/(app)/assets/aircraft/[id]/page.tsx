@@ -17,6 +17,7 @@ import {
   HEADER_TAB_TRIGGER_CLASS,
 } from '@/components/page-header';
 import { BackNavButton } from '@/components/back-nav-button';
+import { CURRENCY_OPTIONS } from '@/lib/currencies';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 import {
   DropdownMenu,
@@ -43,6 +44,7 @@ import {
   MoreHorizontal,
   ChevronDown,
   QrCode,
+  CircleDollarSign,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -297,6 +299,13 @@ const editAircraftSchema = z.object({
   currentTacho: z.coerce.number(),
   tachoAtNext50Inspection: z.coerce.number(),
   tachoAtNext100Inspection: z.coerce.number(),
+  operatingCurrency: z.string().max(8),
+  aircraftCostPerHour: z.coerce.number().min(0),
+  fuelCostPerHour: z.coerce.number().min(0),
+  maintenanceReservePerHour: z.coerce.number().min(0),
+  crewCostPerHour: z.coerce.number().min(0),
+  insuranceOverheadPerHour: z.coerce.number().min(0),
+  otherCostDefault: z.coerce.number().min(0),
 });
 
 type EditAircraftValues = z.infer<typeof editAircraftSchema>;
@@ -1109,6 +1118,24 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                       </CardContent>
                     </Card>
                   </div>
+
+                  <Card className="shadow-none border overflow-hidden">
+                    <CardHeader className="border-b bg-emerald-50/60 px-4 py-3">
+                      <h3 className="text-xs font-black uppercase tracking-widest text-emerald-800 flex items-center gap-2">
+                        <CircleDollarSign className="h-4 w-4" />
+                        Operating Cost Profile
+                      </h3>
+                    </CardHeader>
+                    <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+                      <DetailItem label="Currency" value={aircraft.operatingCostProfile?.currency || 'ZAR'} />
+                      <DetailItem label="Aircraft / Hour" value={(aircraft.operatingCostProfile?.aircraftCostPerHour || 0).toFixed(2)} />
+                      <DetailItem label="Fuel / Hour" value={(aircraft.operatingCostProfile?.fuelCostPerHour || 0).toFixed(2)} />
+                      <DetailItem label="Maintenance Reserve / Hour" value={(aircraft.operatingCostProfile?.maintenanceReservePerHour || 0).toFixed(2)} />
+                      <DetailItem label="Crew / Hour" value={(aircraft.operatingCostProfile?.crewCostPerHour || 0).toFixed(2)} />
+                      <DetailItem label="Insurance / Overhead / Hour" value={(aircraft.operatingCostProfile?.insuranceOverheadPerHour || 0).toFixed(2)} />
+                      <DetailItem label="Other / Trip" value={(aircraft.operatingCostProfile?.otherCostDefault || 0).toFixed(2)} />
+                    </CardContent>
+                  </Card>
 
                   <Card className="shadow-none border overflow-hidden">
                     <CardHeader className="border-b bg-muted/20 px-4 py-3">
@@ -2776,6 +2803,13 @@ function EditAircraftDialog({ aircraft, tenantId }: { aircraft: Aircraft; tenant
       currentTacho: aircraft.currentTacho || 0,
       tachoAtNext50Inspection: aircraft.tachoAtNext50Inspection || 0,
       tachoAtNext100Inspection: aircraft.tachoAtNext100Inspection || 0,
+      operatingCurrency: aircraft.operatingCostProfile?.currency || 'ZAR',
+      aircraftCostPerHour: aircraft.operatingCostProfile?.aircraftCostPerHour ?? 0,
+      fuelCostPerHour: aircraft.operatingCostProfile?.fuelCostPerHour ?? 0,
+      maintenanceReservePerHour: aircraft.operatingCostProfile?.maintenanceReservePerHour ?? 0,
+      crewCostPerHour: aircraft.operatingCostProfile?.crewCostPerHour ?? 0,
+      insuranceOverheadPerHour: aircraft.operatingCostProfile?.insuranceOverheadPerHour ?? 0,
+      otherCostDefault: aircraft.operatingCostProfile?.otherCostDefault ?? 0,
     }
   });
 
@@ -2784,7 +2818,21 @@ function EditAircraftDialog({ aircraft, tenantId }: { aircraft: Aircraft; tenant
         const response = await fetch(`/api/aircraft/${aircraft.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ aircraft: { ...aircraft, ...values } }),
+          body: JSON.stringify({
+            aircraft: {
+              ...aircraft,
+              ...values,
+              operatingCostProfile: {
+                currency: values.operatingCurrency.trim().toUpperCase() || 'ZAR',
+                aircraftCostPerHour: values.aircraftCostPerHour,
+                fuelCostPerHour: values.fuelCostPerHour,
+                maintenanceReservePerHour: values.maintenanceReservePerHour,
+                crewCostPerHour: values.crewCostPerHour,
+                insuranceOverheadPerHour: values.insuranceOverheadPerHour,
+                otherCostDefault: values.otherCostDefault,
+              },
+            },
+          }),
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.error || 'Failed to save aircraft configuration.');
@@ -2842,6 +2890,28 @@ function EditAircraftDialog({ aircraft, tenantId }: { aircraft: Aircraft; tenant
             <div className="grid grid-cols-2 gap-12 bg-primary/5 p-6 rounded-2xl border border-primary/20">
               <FormField control={form.control} name="tachoAtNext50Inspection" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-primary">Next 50h Tacho Target</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-black text-primary border-primary/30" {...field} /></FormControl></FormItem> )}/>
               <FormField control={form.control} name="tachoAtNext100Inspection" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-primary">Next 100h Tacho Target</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-black text-primary border-primary/30" {...field} /></FormControl></FormItem> )}/>
+            </div>
+
+            <div className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50/40 p-6">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800">Operating Cost Profile</p>
+                <p className="mt-1 text-xs text-emerald-900/70">These values prefill Charter booking estimates for {aircraft.tailNumber}.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+                {([
+                  ['operatingCurrency', 'Currency', 'ZAR'],
+                  ['aircraftCostPerHour', 'Aircraft / hour', '0.00'],
+                  ['fuelCostPerHour', 'Fuel / hour', '0.00'],
+                  ['maintenanceReservePerHour', 'Maintenance reserve / hour', '0.00'],
+                  ['crewCostPerHour', 'Crew / hour', '0.00'],
+                  ['insuranceOverheadPerHour', 'Insurance / overhead / hour', '0.00'],
+                  ['otherCostDefault', 'Other / trip', '0.00'],
+                ] as const).map(([fieldName, label, placeholder]) => (
+                  <FormField key={fieldName} control={form.control} name={fieldName} render={({ field }) => (
+                    <FormItem><FormLabel className="text-[9px] font-black uppercase tracking-wider">{label}</FormLabel><FormControl>{fieldName === 'operatingCurrency' ? <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-medium" {...field}>{CURRENCY_OPTIONS.map((currency) => <option key={currency.code} value={currency.code}>{currency.code} - {currency.name}</option>)}</select> : <Input type="number" min="0" step="0.01" placeholder={placeholder} className="h-10" {...field} />}</FormControl><FormMessage /></FormItem>
+                  )} />
+                ))}
+              </div>
             </div>
 
             <DialogFooter className="pt-4">

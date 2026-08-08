@@ -776,13 +776,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         });
     };
 
-    const handleManualConfirmFlight = async () => {
+    const handleInstructorSignOff = async () => {
         if (!canManuallyApprove) {
             toast({ variant: 'destructive', title: 'Permission Denied', description: 'Only the assigned instructor can approve this flight.' });
             return;
         }
 
-        const confirmed = window.confirm(`Approve booking #${booking.bookingNumber} now?`);
+        const confirmed = window.confirm(`Record instructor sign-off for booking #${booking.bookingNumber}?`);
         if (!confirmed) return;
 
         setIsApproving(true);
@@ -794,10 +794,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         booking: {
                             ...booking,
                             checkApprovals,
-                            status: 'Approved',
-                            approvedById: userProfile?.id || booking.approvedById,
-                            approvedByName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}`.trim() : booking.approvedByName,
-                            approvedAt: new Date().toISOString(),
+                            instructorSignOff: {
+                                instructorId: userProfile?.id || booking.instructorId || '',
+                                instructorName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}`.trim() : undefined,
+                                signedOffAt: new Date().toISOString(),
+                            },
                         },
                     }),
                 });
@@ -808,7 +809,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             }
 
             window.dispatchEvent(new Event('safeviate-bookings-updated'));
-            toast({ title: 'Booking Approved', description: 'Instructor approval recorded.' });
+            toast({ title: 'Instructor Sign-off Recorded', description: 'The flight remains scheduled and the instructor sign-off has been recorded.' });
         } catch (error: unknown) {
             toast({
                 variant: 'destructive',
@@ -914,7 +915,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     title={booking.type}
                     subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId} • Inst: ${instructorLabel} • Stud: ${studentLabel}`}
                     status={booking.status}
-                    approvalMeta={booking.approvedByName ? `Approved by ${booking.approvedByName}${booking.approvedAt ? ` • ${formatDateSafe(booking.approvedAt, 'PPP p')}` : ''}` : 'Awaiting instructor approval'}
+                    approvalMeta={booking.instructorSignOff ? `Signed off by ${booking.instructorSignOff.instructorName || 'assigned instructor'}${booking.instructorSignOff.signedOffAt ? ` • ${formatDateSafe(booking.instructorSignOff.signedOffAt, 'PPP p')}` : ''}` : 'Instructor sign-off pending'}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
                     headerAction={isMobile ? null : <BackNavButton href="/bookings/schedule" text="Back to Schedule" />}
@@ -960,11 +961,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 type="button"
                                 size="sm"
                                 className="h-8 bg-emerald-700 px-4 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-800"
-                                onClick={handleManualConfirmFlight}
-                                disabled={isApproving || booking.status === 'Approved' || booking.status === 'Completed' || !canManuallyApprove}
+                                onClick={handleInstructorSignOff}
+                                disabled={isApproving || !!booking.instructorSignOff || booking.status === 'Completed' || !canManuallyApprove}
                             >
                                 {isApproving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-2 h-3.5 w-3.5" />}
-                                {booking.status === 'Approved' ? 'Approved' : 'Approve Booking'}
+                                {booking.instructorSignOff ? 'Signed Off' : 'Instructor Sign-off'}
                             </Button>
                         </div>
                     }
@@ -1297,11 +1298,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                     <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Approval</p>
                                                     <p className="text-sm font-black">{booking.status || 'N/A'}</p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        {booking.approvedByName ? `Approved by ${booking.approvedByName}` : 'Awaiting instructor approval'}
+                                                        {booking.instructorSignOff ? `Signed off by ${booking.instructorSignOff.instructorName || 'assigned instructor'}` : 'Instructor sign-off pending'}
                                                     </p>
-                                                    {booking.approvedAt ? (
+                                                    {booking.instructorSignOff?.signedOffAt ? (
                                                         <p className="text-xs text-muted-foreground">
-                                                            {formatDateSafe(booking.approvedAt, 'PPP p')}
+                                                            {formatDateSafe(booking.instructorSignOff.signedOffAt, 'PPP p')}
                                                         </p>
                                                     ) : null}
                                                 </div>

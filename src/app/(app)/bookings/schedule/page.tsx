@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { CalendarIcon, ChevronDown, Lock, Pencil, ShieldAlert, Trash2, Wrench } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { BookingForm } from './booking-form';
+import { BookingFormRedesign as BookingForm } from './booking-form-redesign';
 import { DebriefRoomBookingForm } from './debrief-room-booking-form';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
@@ -173,7 +173,7 @@ const BookingItem = ({
 }) => {
     const isNonInstructorBooking = ['Rental', 'Charter', 'Contract', 'Ferry Flight', 'Maintenance'].includes(booking.type);
     const compactCrewLabel = isNonInstructorBooking
-        ? `PIC ${booking.studentId ? (peopleMap.get(booking.studentId) || booking.studentId) : 'N/A'} · Co-pilot ${booking.coPilotId ? (peopleMap.get(booking.coPilotId) || booking.coPilotId) : 'N/A'}`
+        ? `PIC ${booking.instructorId ? (peopleMap.get(booking.instructorId) || booking.instructorId) : booking.studentId ? (peopleMap.get(booking.studentId) || booking.studentId) : 'N/A'} · Co-pilot ${booking.coPilotId ? (peopleMap.get(booking.coPilotId) || booking.coPilotId) : 'N/A'}`
         : `Inst ${booking.instructorId ? (peopleMap.get(booking.instructorId) || booking.instructorId) : 'N/A'} · Stud ${booking.studentId ? (peopleMap.get(booking.studentId) || booking.studentId) : 'N/A'}`;
     const segments = getBookingDateSegments(booking);
 
@@ -209,7 +209,7 @@ const BookingItem = ({
                         isCancelled && 'bg-muted text-muted-foreground opacity-60',
                         booking.status === 'Completed' && 'bg-muted text-muted-foreground border-slate-300',
                         booking.status === 'Approved' && 'bg-green-600 text-white border-green-700',
-                        booking.status === 'Confirmed' && booking.preFlight && !booking.postFlight && 'bg-amber-500 text-primary-foreground',
+                        booking.status === 'Confirmed' && booking.preFlight && !booking.postFlight && 'bg-amber-500 text-slate-950',
                         booking.status === 'Confirmed' && !booking.preFlight && 'bg-primary text-primary-foreground'
                     )}
                     style={{ top: `${top}px`, height: `${height}px` }}
@@ -234,7 +234,7 @@ const BookingItem = ({
                                 </p>
                             ) : null}
                             <p className="w-full truncate text-[8px] font-normal leading-tight opacity-90">
-                                {isNonInstructorBooking ? 'PIC' : 'Stud'}: {booking.studentId ? (peopleMap.get(booking.studentId) || booking.studentId) : 'N/A'}
+                                {isNonInstructorBooking ? 'PIC' : 'Stud'}: {isNonInstructorBooking ? (booking.instructorId ? (peopleMap.get(booking.instructorId) || booking.instructorId) : booking.studentId ? (peopleMap.get(booking.studentId) || booking.studentId) : 'N/A') : (booking.studentId ? (peopleMap.get(booking.studentId) || booking.studentId) : 'N/A')}
                             </p>
                             {isNonInstructorBooking ? (
                                 <p className="w-full truncate text-[8px] font-normal leading-tight opacity-90">
@@ -245,39 +245,11 @@ const BookingItem = ({
                         )}
                     </div>
                     <div className="mt-0.5 flex w-full items-center justify-center">
-                        {booking.status !== 'Approved' && booking.status !== 'Completed' && !isCancelled && canManualApprove(booking) ? (
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className={cn(
-                                  'h-5 w-full rounded-md border-input bg-background px-1.5 text-[7px] font-medium uppercase tracking-[0.18em] text-foreground shadow-sm hover:bg-accent justify-center',
-                                  compact && 'px-1'
-                                )}
-                                disabled={isApproving}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onManualApprove(booking);
-                                }}
-                            >
-                                {isApproving ? <Loader2 className="mr-1 h-2 w-2 animate-spin" /> : <CheckCircle2 className="mr-1 h-2 w-2" />}
-                                {compact ? 'Approve' : 'Approve Booking'}
-                            </Button>
-                        ) : (
+                        <>
                             <div className="flex w-full flex-col items-center justify-center gap-0.5 text-center">
                                 {isCancelled && <p className="text-[7px] font-medium uppercase tracking-wide">{compact ? 'Canx' : 'Cancelled'}</p>}
                                 {booking.status === 'Completed' && <p className="text-[7px] font-medium uppercase tracking-wide">{compact ? 'Done' : statusLabel}</p>}
-                                {booking.status === 'Approved' && (
-                                    <p className="text-[7px] font-medium uppercase tracking-wide">
-                                        {booking.approvedByName ? `Approved by ${booking.approvedByName}` : 'Approved'}
-                                    </p>
-                                )}
-                                {booking.status === 'Approved' && booking.approvedAt ? (
-                                    <p className="text-[7px] font-normal leading-none opacity-80">{format(new Date(booking.approvedAt), 'PPP p')}</p>
-                                ) : null}
-                                {booking.status !== 'Approved' && booking.status !== 'Completed' && !isCancelled && !canManualApprove(booking) ? (
-                                    <p className="text-[7px] font-medium uppercase tracking-wide opacity-80">Awaiting instructor approval</p>
-                                ) : null}
+                                {booking.instructorSignOff ? <p className="text-[7px] font-medium uppercase tracking-wide">Instructor signed off</p> : null}
                                 {blockingBooking ? (
                                     <Badge variant="outline" className="h-4 rounded-md border-amber-200 bg-amber-50 px-1.5 text-[6px] font-black uppercase tracking-[0.12em] text-amber-800">
                                         <Lock className="mr-0.5 h-2 w-2" />
@@ -285,7 +257,7 @@ const BookingItem = ({
                                     </Badge>
                                 ) : null}
                             </div>
-                        )}
+                        </>
                     </div>
                 </div>
             )
@@ -620,7 +592,10 @@ export default function SchedulePage() {
     return { totalVehicles, bookedOutCount, availableCount: Math.max(totalVehicles - bookedOutCount, 0) };
   }, [vehicles, activeVehicleUsageByVehicleId]);
 
-  const refreshBookings = useCallback(() => {
+  const refreshBookings = useCallback((updatedBooking?: Booking) => {
+    if (updatedBooking) {
+      setBookingFormData((current) => current && current.booking?.id === updatedBooking.id ? { ...current, booking: updatedBooking } : current);
+    }
     setDataVersion(v => v + 1);
   }, []);
 
@@ -814,8 +789,9 @@ export default function SchedulePage() {
       return;
     }
 
-    const isCurrentHourSlot = isSameDay(slotTime, currentTime) && getHours(slotTime) === getHours(now);
-    const startTime = isCurrentHourSlot ? now : slotTime;
+    // New bookings must inherit the exact swimlane slot, rather than replacing
+    // it with the current clock time when the selected hour is in progress.
+    const startTime = slotTime;
 
     setRoomBookingFormData({ roomId: room.id, roomName: room.name, startTime });
     setIsRoomBookingFormOpen(true);

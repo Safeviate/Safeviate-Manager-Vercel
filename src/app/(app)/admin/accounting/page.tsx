@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/types/aircraft';
+import type { ExternalOrganization } from '@/types/quality';
 import type { Personnel, PilotProfile } from '@/app/(app)/users/personnel/page';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -37,19 +38,22 @@ export default function AccountingPage() {
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [instructors, setInstructors] = useState<PilotProfile[]>([]);
   const [students, setStudents] = useState<PilotProfile[]>([]);
+  const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadData = useCallback(() => {
     void (async () => {
       setIsLoading(true);
       try {
-          const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
+          const [response, organizationsResponse] = await Promise.all([fetch('/api/dashboard-summary', { cache: 'no-store' }), fetch('/api/external-organizations', { cache: 'no-store' })]);
           const payload = await response.json().catch(() => ({ bookings: [], aircrafts: [], personnel: [], instructors: [], students: [] }));
+          const organizationsPayload = await organizationsResponse.json().catch(() => ({ organizations: [] }));
           setBookings(Array.isArray(payload.bookings) ? payload.bookings : []);
           setAircrafts(Array.isArray(payload.aircrafts) ? payload.aircrafts : []);
           setPersonnel(Array.isArray(payload.personnel) ? payload.personnel : []);
           setInstructors(Array.isArray(payload.instructors) ? payload.instructors : []);
           setStudents(Array.isArray(payload.students) ? payload.students : []);
+          setOrganizations(Array.isArray(organizationsPayload.organizations) ? organizationsPayload.organizations : []);
       } catch (e) {
           console.error("Failed to load accounting data", e);
       } finally {
@@ -118,23 +122,31 @@ export default function AccountingPage() {
     return selectedBookings.map(b => {
       const ac = aircraftMap.get(b.aircraftId);
       const user = userMap.get(b.studentId || '');
+      const organization = (b.organizationId ? organizations.find((candidate) => candidate.id === b.organizationId) : undefined)
+        || organizations.find((candidate) => candidate.clientNumber && candidate.clientNumber === b.commercialDetails?.clientNumber);
+      const rateCard = organization?.rateCard;
       const duration = (b.postFlightData?.hobbs || 0) - (b.preFlightData?.hobbs || 0);
-      const rate = ac?.hourlyRate || 0;
+      const operatingCosts = ac?.operatingCostProfile;
+      const internalRate = operatingCosts ? (operatingCosts.aircraftCostPerHour ?? 0) + (operatingCosts.fuelCostPerHour ?? 0) + (operatingCosts.maintenanceReservePerHour ?? 0) + (operatingCosts.crewCostPerHour ?? 0) + (operatingCosts.insuranceOverheadPerHour ?? 0) : 0;
+      const rate = rateCard?.hourlyRate ?? ac?.hourlyRate ?? internalRate;
+      const billableHours = Math.max(duration, rateCard?.minimumHours ?? 0);
+      const tripCost = rateCard ? 0 : operatingCosts?.otherCostDefault || 0;
+      const currency = rateCard?.currency || operatingCosts?.currency || 'USD';
       
       return {
         reference: b.bookingNumber,
         date: b.date,
-        customerId: user?.userNumber || "CASH",
-        customerName: user ? `${user.firstName} ${user.lastName}` : "CASH_CLIENT",
+        customerId: organization?.clientNumber || user?.userNumber || "CASH",
+        customerName: organization?.name || (user ? `${user.firstName} ${user.lastName}` : "CASH_CLIENT"),
         description: `Flight: ${ac?.tailNumber || b.aircraftId} (${b.type})`,
-        duration: duration.toFixed(1),
-        rate: rate.toFixed(2),
-        total: (duration * rate).toFixed(2),
+        duration: billableHours.toFixed(1),
+        rate: `${currency} ${rate.toFixed(2)}`,
+        total: `${currency} ${(billableHours * rate + tripCost).toFixed(2)}`,
         nominalCode: "4000",
         id: b.id
       };
     });
-  }, [selectedIds, enrichedData.unbilled, aircrafts, allUsers]);
+  }, [selectedIds, enrichedData.unbilled, aircrafts, allUsers, organizations]);
 
   const handleSageExport = async () => {
     if (selectedIds.size === 0) return;
@@ -187,10 +199,16 @@ export default function AccountingPage() {
   const totalBillable = useMemo(() => {
     return enrichedData.unbilled.reduce((sum, b) => {
       const ac = aircrafts?.find(a => a.id === b.aircraftId);
+      const organization = (b.organizationId ? organizations.find((candidate) => candidate.id === b.organizationId) : undefined)
+        || organizations.find((candidate) => candidate.clientNumber && candidate.clientNumber === b.commercialDetails?.clientNumber);
+      const rateCard = organization?.rateCard;
       const duration = (b.postFlightData?.hobbs || 0) - (b.preFlightData?.hobbs || 0);
-      return sum + (duration * (ac?.hourlyRate || 0));
+      const operatingCosts = ac?.operatingCostProfile;
+      const internalRate = operatingCosts ? (operatingCosts.aircraftCostPerHour ?? 0) + (operatingCosts.fuelCostPerHour ?? 0) + (operatingCosts.maintenanceReservePerHour ?? 0) + (operatingCosts.crewCostPerHour ?? 0) + (operatingCosts.insuranceOverheadPerHour ?? 0) : 0;
+      const rate = rateCard?.hourlyRate ?? ac?.hourlyRate ?? internalRate;
+      return sum + (Math.max(duration, rateCard?.minimumHours ?? 0) * rate) + (rateCard ? 0 : operatingCosts?.otherCostDefault || 0);
     }, 0);
-  }, [enrichedData.unbilled, aircrafts]);
+  }, [enrichedData.unbilled, aircrafts, organizations]);
 
   if (isLoading) return <div className="p-8 space-y-6 px-1"><Skeleton className="h-14 w-full" /><Skeleton className="h-[400px] w-full" /></div>;
 
@@ -312,6 +330,7 @@ export default function AccountingPage() {
                 bookings={enrichedData.unbilled} 
                 aircrafts={aircrafts || []} 
                 personnel={allUsers}
+                organizations={organizations}
                 selectedIds={selectedIds}
                 onToggleSelection={toggleSelection}
                 onToggleAll={toggleAll}
@@ -323,6 +342,7 @@ export default function AccountingPage() {
                 bookings={enrichedData.exported} 
                 aircrafts={aircrafts || []} 
                 personnel={allUsers}
+                organizations={organizations}
                 selectedIds={new Set()}
                 onToggleSelection={() => {}}
                 onToggleAll={() => {}}

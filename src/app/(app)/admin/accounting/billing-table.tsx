@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/types/aircraft';
+import type { ExternalOrganization } from '@/types/quality';
 import type { Personnel, PilotProfile } from '@/app/(app)/users/personnel/page';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,6 +26,7 @@ interface BillingTableProps {
   bookings: Booking[];
   aircrafts: Aircraft[];
   personnel: (Personnel | PilotProfile)[];
+  organizations: ExternalOrganization[];
   selectedIds: Set<string>;
   onToggleSelection: (id: string) => void;
   onToggleAll: (ids: string[]) => void;
@@ -34,12 +36,14 @@ export function BillingTable({
   bookings,
   aircrafts,
   personnel,
+  organizations,
   selectedIds,
   onToggleSelection,
   onToggleAll,
 }: BillingTableProps) {
   const aircraftMap = useMemo(() => new Map(aircrafts.map(a => [a.id, a])), [aircrafts]);
   const userMap = useMemo(() => new Map(personnel.map(p => [p.id, `${p.firstName} ${p.lastName}`])), [personnel]);
+  const organizationMap = useMemo(() => new Map(organizations.map((organization) => [organization.id, organization])), [organizations]);
 
   const allIds = useMemo(() => bookings.map(b => b.id), [bookings]);
   const isAllSelected = allIds.length > 0 && selectedIds.size === allIds.length;
@@ -79,8 +83,16 @@ export function BillingTable({
           renderItem={(booking) => {
             const ac = aircraftMap.get(booking.aircraftId);
             const duration = (booking.postFlightData?.hobbs || 0) - (booking.preFlightData?.hobbs || 0);
-            const rate = ac?.hourlyRate || 0;
-            const total = duration * rate;
+            const organization = (booking.organizationId ? organizationMap.get(booking.organizationId) : undefined)
+              || organizations.find((candidate) => candidate.clientNumber && candidate.clientNumber === booking.commercialDetails?.clientNumber);
+            const rateCard = organization?.rateCard;
+            const operatingCosts = ac?.operatingCostProfile;
+            const internalRate = operatingCosts ? (operatingCosts.aircraftCostPerHour ?? 0) + (operatingCosts.fuelCostPerHour ?? 0) + (operatingCosts.maintenanceReservePerHour ?? 0) + (operatingCosts.crewCostPerHour ?? 0) + (operatingCosts.insuranceOverheadPerHour ?? 0) : 0;
+            const rate = rateCard?.hourlyRate ?? ac?.hourlyRate ?? internalRate;
+            const billableHours = Math.max(duration, rateCard?.minimumHours ?? 0);
+            const tripCost = rateCard ? 0 : operatingCosts?.otherCostDefault || 0;
+            const total = billableHours * rate + tripCost;
+            const currency = rateCard?.currency || operatingCosts?.currency || 'USD';
             const isSelected = selectedIds.has(booking.id);
 
             return (
@@ -122,17 +134,17 @@ export function BillingTable({
                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Client / Student</p>
                     <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-foreground">
                       <User className="h-3.5 w-3.5 text-muted-foreground" />
-                      {userMap.get(booking.studentId || '') || 'Private / External'}
+                      {organization?.name || userMap.get(booking.studentId || '') || 'Private / External'}
                     </p>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-lg border bg-background px-3 py-3">
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Rate</p>
-                      <p className="mt-1 text-sm font-semibold text-foreground">${rate.toFixed(2)}</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">{currency} {rate.toFixed(2)}</p>
                     </div>
                     <div className="rounded-lg border bg-background px-3 py-3">
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Total</p>
-                      <p className="mt-1 text-sm font-semibold text-primary">${total.toFixed(2)}</p>
+                      <p className="mt-1 text-sm font-semibold text-primary">{currency} {total.toFixed(2)}</p>
                     </div>
                   </div>
                 </CardContent>

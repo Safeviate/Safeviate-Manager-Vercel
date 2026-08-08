@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '@/types/aircraft';
+import { CURRENCY_OPTIONS } from '@/lib/currencies';
 
 const formSchema = z.object({
   make: z.string().min(1, 'Make is required'),
@@ -28,8 +29,6 @@ const formSchema = z.object({
   maintenanceReservePerHour: z.coerce.number().min(0),
   crewCostPerHour: z.coerce.number().min(0),
   insuranceOverheadPerHour: z.coerce.number().min(0),
-  landingFeesDefault: z.coerce.number().min(0),
-  handlingFeesDefault: z.coerce.number().min(0),
   otherCostDefault: z.coerce.number().min(0),
 });
 
@@ -63,8 +62,6 @@ export function AircraftForm({ tenantId, existingAircraft, onCancel, trigger }: 
       maintenanceReservePerHour: existingAircraft?.operatingCostProfile?.maintenanceReservePerHour ?? 0,
       crewCostPerHour: existingAircraft?.operatingCostProfile?.crewCostPerHour ?? 0,
       insuranceOverheadPerHour: existingAircraft?.operatingCostProfile?.insuranceOverheadPerHour ?? 0,
-      landingFeesDefault: existingAircraft?.operatingCostProfile?.landingFeesDefault ?? 0,
-      handlingFeesDefault: existingAircraft?.operatingCostProfile?.handlingFeesDefault ?? 0,
       otherCostDefault: existingAircraft?.operatingCostProfile?.otherCostDefault ?? 0,
     },
   });
@@ -87,8 +84,6 @@ export function AircraftForm({ tenantId, existingAircraft, onCancel, trigger }: 
             maintenanceReservePerHour: values.maintenanceReservePerHour,
             crewCostPerHour: values.crewCostPerHour,
             insuranceOverheadPerHour: values.insuranceOverheadPerHour,
-            landingFeesDefault: values.landingFeesDefault,
-            handlingFeesDefault: values.handlingFeesDefault,
             otherCostDefault: values.otherCostDefault,
           },
         },
@@ -136,12 +131,10 @@ export function AircraftForm({ tenantId, existingAircraft, onCancel, trigger }: 
               ['maintenanceReservePerHour', 'Maintenance reserve / hour', '0.00'],
               ['crewCostPerHour', 'Crew / hour', '0.00'],
               ['insuranceOverheadPerHour', 'Insurance / overhead / hour', '0.00'],
-              ['landingFeesDefault', 'Landing fees / trip', '0.00'],
-              ['handlingFeesDefault', 'Handling / trip', '0.00'],
               ['otherCostDefault', 'Other / trip', '0.00'],
             ] as const).map(([fieldName, label, placeholder]) => (
               <FormField key={fieldName} control={form.control} name={fieldName} render={({ field }) => (
-                <FormItem><FormLabel className="text-[9px] font-black uppercase tracking-wider">{label}</FormLabel><FormControl><Input type={fieldName === 'operatingCurrency' ? 'text' : 'number'} min={fieldName === 'operatingCurrency' ? undefined : 0} step={fieldName === 'operatingCurrency' ? undefined : '0.01'} placeholder={placeholder} className="h-10" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel className="text-[9px] font-black uppercase tracking-wider">{label}</FormLabel><FormControl>{fieldName === 'operatingCurrency' ? <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-medium" {...field}>{CURRENCY_OPTIONS.map((currency) => <option key={currency.code} value={currency.code}>{currency.code} - {currency.name}</option>)}</select> : <Input type="number" min="0" step="0.01" placeholder={placeholder} className="h-10" {...field} />}</FormControl><FormMessage /></FormItem>
               )} />
             ))}
           </div>

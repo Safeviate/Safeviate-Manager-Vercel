@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { CARD_HEADER_BAND_CLASS, HEADER_COMPACT_CONTROL_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
+import { CURRENCY_OPTIONS } from '@/lib/currencies';
 
 const EXTERNAL_ORGANIZATIONS_UPDATED_EVENT = 'safeviate-external-organizations-updated';
 
@@ -314,7 +315,7 @@ export default function ExternalCompaniesPage() {
             <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
               <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-sky-800">Client Rate Card</p><p className="mt-1 text-xs text-muted-foreground">Client charges are separate from the aircraft’s internal operating costs.</p></div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2"><Label htmlFor="rate-currency">Currency</Label><Input id="rate-currency" maxLength={8} value={rateCurrency} onChange={(e) => setRateCurrency(e.target.value)} /></div>
+                <div className="space-y-2"><Label htmlFor="rate-currency">Currency</Label><select id="rate-currency" value={rateCurrency} onChange={(e) => setRateCurrency(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-medium"><option value="">Select currency</option>{CURRENCY_OPTIONS.map((currency) => <option key={currency.code} value={currency.code}>{currency.code} - {currency.name}</option>)}</select></div>
                 <div className="space-y-2"><Label htmlFor="hourly-rate">Aircraft hourly rate</Label><Input id="hourly-rate" type="number" min="0" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} /></div>
                 <div className="space-y-2"><Label htmlFor="minimum-hours">Minimum billable hours</Label><Input id="minimum-hours" type="number" min="0" step="0.1" value={minimumHours} onChange={(e) => setMinimumHours(e.target.value)} /></div>
                 <div className="space-y-2"><Label htmlFor="positioning-rate">Positioning rate</Label><Input id="positioning-rate" type="number" min="0" step="0.01" value={positioningRate} onChange={(e) => setPositioningRate(e.target.value)} /></div>

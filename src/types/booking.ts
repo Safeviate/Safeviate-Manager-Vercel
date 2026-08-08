@@ -10,8 +10,11 @@ export interface PreFlightData {
     tacho: number;
     fuelUpliftGallons: number;
     fuelUpliftLitres: number;
+    fuelUpliftPounds?: number;
+    fuelUpliftKilograms?: number;
     oilUplift: number;
     documentsChecked: boolean;
+    onboardDocumentChecklist?: Record<string, boolean>;
 }
 
 export interface PostFlightData {
@@ -198,6 +201,11 @@ export interface Booking {
   approvedById?: string;
   approvedByName?: string;
   approvedAt?: string;
+  instructorSignOff?: {
+    instructorId: string;
+    instructorName?: string;
+    signedOffAt: string;
+  };
   checkApprovals?: BookingCheckApprovals;
   workflowCompletion?: BookingWorkflowCompletion;
   workflowApprovals?: BookingWorkflowApprovals;

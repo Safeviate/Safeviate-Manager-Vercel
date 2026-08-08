@@ -80,8 +80,6 @@ export interface Aircraft {
         maintenanceReservePerHour?: number;
         crewCostPerHour?: number;
         insuranceOverheadPerHour?: number;
-        landingFeesDefault?: number;
-        handlingFeesDefault?: number;
         otherCostDefault?: number;
     };
     fuelEnduranceHours?: number;

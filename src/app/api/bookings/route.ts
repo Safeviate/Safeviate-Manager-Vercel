@@ -55,6 +55,9 @@ function hasBookingSignatureMutation(existingData: Record<string, any> | null, i
   if ('approvedAt' in incoming && incoming.approvedAt !== existingData?.approvedAt) {
     return true;
   }
+  if ('instructorSignOff' in incoming && toStableJson(incoming.instructorSignOff) !== toStableJson(existingData?.instructorSignOff)) {
+    return true;
+  }
 
   if (incoming.status === 'Approved' && existingData?.status !== 'Approved') {
     return true;
