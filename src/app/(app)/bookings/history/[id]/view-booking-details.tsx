@@ -752,7 +752,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         postFlightData: stripUndefinedDeep(postFlight),
                         preFlight: true,
                         postFlight: (postFlight.hobbs || 0) > 0,
-                        status: 'Completed',
                         workflowCompletion: {
                             ...workflowCompletion,
                             checks: true,
@@ -767,7 +766,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             setWorkflowCompletion((current) => ({ ...current, checks: true }));
             window.dispatchEvent(new Event('safeviate-bookings-updated'));
             window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
-            toast({ title: 'Checks Saved' });
+            toast({ title: 'Flight Record Saved' });
         } catch (error: unknown) {
             toast({ variant: 'destructive', title: 'Save Failed', description: error instanceof Error ? error.message : 'Save failed.' });
         } finally {
@@ -1287,14 +1286,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                     {isSaving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-2 h-3.5 w-3.5" />}
                                                     Save Checks
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={handleManualConfirmFlight}
-                                                    disabled={isApproving || booking.status === 'Approved' || booking.status === 'Completed' || !canManuallyApprove || !approvalPrerequisitesComplete}
-                                                    className="text-[10px] font-bold uppercase"
-                                                >
-                                                    {isApproving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-2 h-3.5 w-3.5" />}
-                                                    {booking.status === 'Approved' ? 'Approved' : 'Approve Flight'}
-                                                </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>
@@ -1310,22 +1301,10 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     disabled={isSaving}
                                     >
                                         {isSaving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-2 h-3.5 w-3.5" />}
-                                        Save Checks
-                                    </Button>
-                                    <Button
-                                    type="button"
-                                    size="sm"
-                                    className="h-8 bg-emerald-700 px-4 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-800"
-                                    onClick={handleManualConfirmFlight}
-                                    disabled={isApproving || booking.status === 'Approved' || booking.status === 'Completed' || !canManuallyApprove || !approvalPrerequisitesComplete}
-                                    >
-                                        {isApproving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-2 h-3.5 w-3.5" />}
-                                        {booking.status === 'Approved' ? 'Approved' : 'Approve Flight'}
+                                                    Save Flight Record
                                     </Button>
                                     </div>
-                                    <p className="text-[9px] font-medium capitalize tracking-[0.18em] text-muted-foreground">
-                                        Save each section first, then approve from checks.
-                                    </p>
+                                    <p className="text-[9px] font-medium capitalize tracking-[0.18em] text-muted-foreground">Save the operational record here; flight completion and billing are handled by their dedicated workflow.</p>
                                 </div>
                                 )
                         ) : null
@@ -1706,7 +1685,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         </div>
                     </TabsContent><TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
                         <div className="min-h-0 flex-1 overflow-hidden">
-                            <NavlogBuilder booking={booking} tenantId={tenantId!} fuelWeightLbs={fuelWeightLbs} onFuelWeightChange={handleNavlogFuelSync} />
+                            <NavlogBuilder
+                                booking={booking}
+                                tenantId={tenantId!}
+                                fuelWeightLbs={fuelWeightLbs}
+                                fuelDensityLbPerGallon={fuelStation?.densityLbPerGallon}
+                                onFuelWeightChange={handleNavlogFuelSync}
+                            />
                         </div>
                     </TabsContent>
                 </div>

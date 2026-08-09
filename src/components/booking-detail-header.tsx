@@ -150,7 +150,7 @@ export function BookingDetailHeader({
             { value: 'planning', label: 'Planning', icon: Settings2 },
             { value: 'mass-balance', label: 'Mass & Balance', icon: Scale },
             { value: 'navlog', label: 'Navlog', icon: NavIcon },
-            { value: 'checks', label: 'Checks', icon: ClipboardCheck },
+            { value: 'checks', label: 'Flight Closeout', icon: ClipboardCheck },
           ]}
         />
       </div>

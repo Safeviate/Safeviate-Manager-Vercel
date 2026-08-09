@@ -24,7 +24,11 @@
     "prisma:push:local": "dotenv -e .env.local -- prisma db push",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:studio": "node scripts/prisma-studio.cjs",
-    "prisma:studio:prod": "node scripts/prisma-studio.cjs --prod"
+    "prisma:studio:prod": "node scripts/prisma-studio.cjs --prod",
+    "local:db:up": "node scripts/local-demo-db.cjs up",
+    "local:db:down": "node scripts/local-demo-db.cjs down",
+    "local:db:reset": "node scripts/local-demo-db.cjs reset",
+    "local:setup": "node scripts/local-demo-db.cjs setup"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.31.0",

@@ -155,6 +155,24 @@ export interface NavlogLeg {
     tripFuel?: number;
 }
 
+/**
+ * An airport nominated for use if the destination cannot be used.
+ * Fuel figures use the navlog's selected fuel unit (gallons or litres).
+ */
+export interface NavlogAlternate {
+    icao?: string;
+    fuelRequired?: number;
+    notes?: string;
+}
+
+/** Fuel allowances used to turn the calculated route fuel into block fuel. */
+export interface NavlogFuelPolicy {
+    taxiFuel?: number;
+    contingencyFuel?: number;
+    finalReserveFuel?: number;
+    holdingFuel?: number;
+}
+
 export interface Navlog {
     legs: NavlogLeg[];
     departureIcao?: string;
@@ -172,6 +190,8 @@ export interface Navlog {
     globalFuelBurn?: number;
     globalFuelBurnUnit?: 'GPH' | 'LPH';
     globalFuelOnBoard?: number;
+    alternates?: NavlogAlternate[];
+    fuelPolicy?: NavlogFuelPolicy;
     hazards?: Hazard[];
 }
 

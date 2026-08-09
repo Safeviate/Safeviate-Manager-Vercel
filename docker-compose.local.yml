@@ -1,0 +1,21 @@
+services:
+  safeviate-postgres:
+    image: postgres:16-alpine
+    container_name: safeviate-postgres-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: safeviate
+      POSTGRES_USER: safeviate
+      POSTGRES_PASSWORD: safeviate-local
+    ports:
+      - "5433:5432"
+    volumes:
+      - safeviate-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U safeviate -d safeviate"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  safeviate-postgres-data:

@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import type { Booking, NavlogLeg } from '@/types/booking';
-import { Card } from '@/components/ui/card';
+import type { Booking, NavlogAlternate, NavlogFuelPolicy, NavlogLeg } from '@/types/booking';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,15 +19,29 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@
 import { Library, Search } from 'lucide-react';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordinate-utils';
+import { isCommercialBooking } from '@/lib/booking-profile';
+import { gallonsToLitres, poundsToKilograms, LITRES_PER_GALLON } from '@/lib/fuel';
 
-/** Weight of AVGAS per gallon in lbs */
+/** Default fuel density in lbs per gallon when the aircraft station has no configured density. */
 const FUEL_WEIGHT_PER_GALLON = 6;
+const EMPTY_FUEL_POLICY: Required<NavlogFuelPolicy> = {
+    taxiFuel: 0,
+    contingencyFuel: 0,
+    finalReserveFuel: 0,
+    holdingFuel: 0,
+};
+const DEFAULT_ALTERNATES: NavlogAlternate[] = [
+    { icao: '', fuelRequired: 0, notes: '' },
+    { icao: '', fuelRequired: 0, notes: '' },
+];
 
 interface NavlogBuilderProps {
     booking: Booking;
     tenantId: string;
     /** Fuel weight in lbs from the M&B fuel station (for bi-directional sync) */
     fuelWeightLbs?: number;
+    /** Aircraft fuel density used for volume-to-mass conversions. */
+    fuelDensityLbPerGallon?: number;
     /** Callback when endurance changes — parent updates the M&B fuel station */
     onFuelWeightChange?: (weightLbs: number) => void;
 }
@@ -60,7 +74,7 @@ function InlineInput({
     );
 }
 
-export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightChange }: NavlogBuilderProps) {
+export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, fuelDensityLbPerGallon = FUEL_WEIGHT_PER_GALLON, onFuelWeightChange }: NavlogBuilderProps) {
     const { toast } = useToast();
     const legs = booking.navlog?.legs || [];
     const [expandedLegId, setExpandedLegId] = useState<string | null>(null);
@@ -74,11 +88,32 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
         fuelOnBoard: booking.navlog?.globalFuelOnBoard ?? DEFAULT_FLIGHT_PARAMS.fuelOnBoard,
     });
     const [fuelUnit, setFuelUnit] = useState<'GPH' | 'LPH'>(booking.navlog?.globalFuelBurnUnit ?? 'GPH');
+    const [alternates, setAlternates] = useState<NavlogAlternate[]>(() =>
+        DEFAULT_ALTERNATES.map((alternate, index) => ({ ...alternate, ...(booking.navlog?.alternates?.[index] ?? {}) }))
+    );
+    const [fuelPolicy, setFuelPolicy] = useState<Required<NavlogFuelPolicy>>(() => ({
+        ...EMPTY_FUEL_POLICY,
+        ...(booking.navlog?.fuelPolicy ?? {}),
+    }));
     const [showPerLegWind, setShowPerLegWind] = useState(false);
+    const [isFuelPlanOpen, setIsFuelPlanOpen] = useState(false);
     const [isImportOpen, setIsImportOpen] = useState(false);
     const [searchRoute, setSearchRoute] = useState('');
 
     const [trainingRoutes, setTrainingRoutes] = useState<TrainingRoute[]>([]);
+
+    useEffect(() => {
+        setParams({
+            tas: booking.navlog?.globalTas ?? DEFAULT_FLIGHT_PARAMS.tas,
+            windDirection: booking.navlog?.globalWindDirection ?? DEFAULT_FLIGHT_PARAMS.windDirection,
+            windSpeed: booking.navlog?.globalWindSpeed ?? DEFAULT_FLIGHT_PARAMS.windSpeed,
+            fuelBurnPerHour: booking.navlog?.globalFuelBurn ?? DEFAULT_FLIGHT_PARAMS.fuelBurnPerHour,
+            fuelOnBoard: booking.navlog?.globalFuelOnBoard ?? DEFAULT_FLIGHT_PARAMS.fuelOnBoard,
+        });
+        setFuelUnit(booking.navlog?.globalFuelBurnUnit ?? 'GPH');
+        setAlternates(DEFAULT_ALTERNATES.map((alternate, index) => ({ ...alternate, ...(booking.navlog?.alternates?.[index] ?? {}) })));
+        setFuelPolicy({ ...EMPTY_FUEL_POLICY, ...(booking.navlog?.fuelPolicy ?? {}) });
+    }, [booking.id]);
 
     useEffect(() => {
         let cancelled = false;
@@ -126,12 +161,13 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
             syncSourceRef.current = null;
             return;
         }
-        const gallons = parseFloat((fuelWeightLbs / FUEL_WEIGHT_PER_GALLON).toFixed(1));
-        if (Math.abs(gallons - params.fuelOnBoard) > 0.05) {
+        const gallons = parseFloat((fuelWeightLbs / fuelDensityLbPerGallon).toFixed(1));
+        const fuelOnBoard = fuelUnit === 'GPH' ? gallons : gallonsToLitres(gallons);
+        if (Math.abs(fuelOnBoard - params.fuelOnBoard) > 0.05) {
             syncSourceRef.current = 'mb';
-            setParams(prev => ({ ...prev, fuelOnBoard: gallons }));
+            setParams(prev => ({ ...prev, fuelOnBoard }));
         }
-    }, [fuelWeightLbs]);
+    }, [fuelWeightLbs, fuelDensityLbPerGallon, fuelUnit]);
 
     // When FOB changes → push fuel weight to M&B
     useEffect(() => {
@@ -139,10 +175,11 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
             syncSourceRef.current = null;
             return;
         }
-        const weightLbs = parseFloat((params.fuelOnBoard * FUEL_WEIGHT_PER_GALLON).toFixed(1));
+        const gallons = fuelUnit === 'GPH' ? params.fuelOnBoard : params.fuelOnBoard / LITRES_PER_GALLON;
+        const weightLbs = parseFloat((gallons * fuelDensityLbPerGallon).toFixed(1));
         syncSourceRef.current = 'navlog';
         onFuelWeightChange(weightLbs);
-    }, [params.fuelOnBoard, onFuelWeightChange]);
+    }, [params.fuelOnBoard, fuelDensityLbPerGallon, fuelUnit, onFuelWeightChange]);
 
     // Full E6B recalculation
     const calculatedLegs = useMemo(
@@ -153,6 +190,39 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
         () => calculateRouteTotals(calculatedLegs, params),
         [calculatedLegs, params]
     );
+    const alternateFuel = useMemo(
+        () => alternates.reduce((sum, alternate) => sum + (alternate.fuelRequired || 0), 0),
+        [alternates]
+    );
+    const blockFuel = totals.fuel + alternateFuel + fuelPolicy.taxiFuel + fuelPolicy.contingencyFuel + fuelPolicy.finalReserveFuel + fuelPolicy.holdingFuel;
+    const fobGallons = fuelUnit === 'GPH' ? params.fuelOnBoard : params.fuelOnBoard / LITRES_PER_GALLON;
+    const fobLitres = gallonsToLitres(fobGallons);
+    const fobPounds = fobGallons * fuelDensityLbPerGallon;
+    const fobKilograms = poundsToKilograms(fobPounds);
+    const isCommercial = isCommercialBooking(booking);
+
+    const updateAlternate = (index: number, changes: Partial<NavlogAlternate>) => {
+        setAlternates((current) => current.map((alternate, alternateIndex) => (
+            alternateIndex === index ? { ...alternate, ...changes } : alternate
+        )));
+    };
+
+    const handleFuelUnitChange = () => {
+        const factor = fuelUnit === 'GPH' ? LITRES_PER_GALLON : 1 / LITRES_PER_GALLON;
+        setParams((current) => ({
+            ...current,
+            fuelBurnPerHour: Number((current.fuelBurnPerHour * factor).toFixed(2)),
+            fuelOnBoard: Number((current.fuelOnBoard * factor).toFixed(2)),
+        }));
+        setAlternates((current) => current.map((alternate) => ({ ...alternate, fuelRequired: Number(((alternate.fuelRequired || 0) * factor).toFixed(2)) })));
+        setFuelPolicy((current) => ({
+            taxiFuel: Number((current.taxiFuel * factor).toFixed(2)),
+            contingencyFuel: Number((current.contingencyFuel * factor).toFixed(2)),
+            finalReserveFuel: Number((current.finalReserveFuel * factor).toFixed(2)),
+            holdingFuel: Number((current.holdingFuel * factor).toFixed(2)),
+        }));
+        setFuelUnit((current) => current === 'GPH' ? 'LPH' : 'GPH');
+    };
 
     const formatMinutes = (minutes: number): string => {
         if (!isFinite(minutes) || minutes <= 0) return '-';
@@ -207,13 +277,15 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                             globalFuelBurn: params.fuelBurnPerHour,
                             globalFuelBurnUnit: fuelUnit,
                             globalFuelOnBoard: params.fuelOnBoard,
+                            alternates: alternates.filter((alternate) => Boolean(alternate.icao || alternate.fuelRequired || alternate.notes)),
+                            fuelPolicy,
                         },
                     },
                 }),
             });
             if (!response.ok) throw new Error((await parseJsonResponse<{ error?: string }>(response))?.error || 'Save failed');
             window.dispatchEvent(new Event('safeviate-bookings-updated'));
-            toast({ title: 'Flight Parameters Saved' });
+            toast({ title: 'Flight Plan Saved' });
         } catch (e: unknown) {
             toast({ variant: 'destructive', title: 'Save Failed', description: e instanceof Error ? e.message : 'Save failed.' });
         }
@@ -249,7 +321,7 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
     return (
         <div className="flex-1 flex flex-col min-h-0 h-full bg-background overflow-hidden">
             {/* ── Global Flight Parameters Bar ── */}
-            <div className="shrink-0 border-b bg-muted/20 px-4 py-3 space-y-3">
+            <div className="shrink-0 border-b bg-muted/20 px-4 py-2 space-y-2">
                 <div className="flex items-center justify-between">
                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                         <Settings2 className="h-3.5 w-3.5" /> Flight Parameters
@@ -268,7 +340,7 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                             variant="ghost"
                             size="sm"
                             className="h-6 text-[9px] font-black uppercase"
-                            onClick={() => setFuelUnit(fuelUnit === 'GPH' ? 'LPH' : 'GPH')}
+                            onClick={handleFuelUnitChange}
                         >
                             {fuelUnit}
                         </Button>
@@ -282,7 +354,7 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                         </Button>
                     </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-4">
                     <div className="flex items-center gap-2">
                         <Gauge className="h-3.5 w-3.5 text-primary" />
                         <span className="text-[9px] font-black uppercase text-muted-foreground">TAS</span>
@@ -341,7 +413,7 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                     </div>
                 </div>
                 {/* Derived endurance & reserve summary */}
-                <div className="flex items-center gap-4 text-[10px] font-black uppercase">
+                <div className="hidden">
                     <span className="text-muted-foreground">
                         Endurance: <span className="text-foreground">{params.fuelBurnPerHour > 0 ? (params.fuelOnBoard / params.fuelBurnPerHour).toFixed(1) : '∞'} hrs</span>
                     </span>
@@ -349,6 +421,103 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                         Reserve: <span className={totals.fuelRemaining < 0 ? 'text-destructive' : 'text-emerald-600'}>{totals.enduranceRemaining.toFixed(1)} hrs ({totals.fuelRemaining.toFixed(1)} {fuelUnit === 'GPH' ? 'GAL' : 'L'})</span>
                     </span>
                 </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-black uppercase">
+                        <span className="text-muted-foreground">Endurance <span className="text-foreground">{params.fuelBurnPerHour > 0 ? (params.fuelOnBoard / params.fuelBurnPerHour).toFixed(1) : '∞'} hrs</span></span>
+                        <span className="text-muted-foreground">Landing fuel <span className={totals.fuelRemaining < 0 ? 'text-destructive' : 'text-emerald-600'}>{totals.fuelRemaining.toFixed(1)} {fuelUnit === 'GPH' ? 'GAL' : 'L'}</span></span>
+                        <span className="text-muted-foreground">Block <span className="text-foreground">{blockFuel.toFixed(1)} {fuelUnit === 'GPH' ? 'GAL' : 'L'}</span></span>
+                        <span className="text-muted-foreground">Alternate <span className="text-foreground">{alternates[0]?.icao || 'Not recorded'}</span></span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-black uppercase">
+                        <span className="text-muted-foreground">FOB <span className="text-foreground">{fobGallons.toFixed(1)} GAL</span></span>
+                        <span className="text-muted-foreground"><span className="text-foreground">{fobLitres.toFixed(1)} L</span></span>
+                        <span className="text-muted-foreground"><span className="text-foreground">{fobPounds.toFixed(0)} LB</span></span>
+                        <span className="text-muted-foreground"><span className="text-foreground">{fobKilograms.toFixed(1)} KG</span></span>
+                    </div>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[9px] font-black uppercase"
+                        onClick={() => setIsFuelPlanOpen((open) => !open)}
+                    >
+                        Fuel & alternates <ChevronDown className={cn('ml-1 h-3.5 w-3.5 transition-transform', isFuelPlanOpen && 'rotate-180')} />
+                    </Button>
+                </div>
+                {isFuelPlanOpen ? (
+                    <Card className="overflow-hidden rounded-xl border-sky-200 bg-sky-50/40 shadow-none">
+                        <CardContent className="p-3">
+                <div className="rounded-lg border border-sky-100 bg-background p-3">
+                    <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-sky-900">Alternates & fuel policy</p>
+                            <p className="mt-0.5 text-[10px] text-slate-600">
+                                {isCommercial ? 'Record dispatch allowances and alternates for this commercial flight.' : 'Optional for training; use when an alternate or formal fuel plan is required.'}
+                            </p>
+                        </div>
+                        <Badge variant="outline" className="border-sky-200 bg-white text-[9px] font-black uppercase text-sky-800">
+                            {fuelUnit === 'GPH' ? 'Gallons' : 'Litres'}
+                        </Badge>
+                    </div>
+                    <div className="grid gap-3 lg:grid-cols-2">
+                        {alternates.map((alternate, index) => (
+                            <div key={index} className="grid grid-cols-[minmax(0,1fr)_88px] gap-2 rounded-lg border border-sky-100 bg-background p-2">
+                                <label className="space-y-1">
+                                    <span className="block text-[8px] font-black uppercase tracking-wider text-muted-foreground">{index === 0 ? 'Primary alternate' : 'Secondary alternate'}</span>
+                                    <Input
+                                        value={alternate.icao ?? ''}
+                                        onChange={(event) => updateAlternate(index, { icao: event.target.value.toUpperCase() })}
+                                        placeholder="ICAO"
+                                        className="h-7 text-xs font-bold uppercase"
+                                    />
+                                </label>
+                                <label className="space-y-1">
+                                    <span className="block text-[8px] font-black uppercase tracking-wider text-muted-foreground">Fuel</span>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="0.1"
+                                        value={alternate.fuelRequired ?? 0}
+                                        onChange={(event) => updateAlternate(index, { fuelRequired: Number(event.target.value) || 0 })}
+                                        className="h-7 text-center text-xs font-bold"
+                                    />
+                                </label>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {([
+                            ['taxiFuel', 'Taxi'],
+                            ['contingencyFuel', 'Contingency'],
+                            ['finalReserveFuel', 'Final reserve'],
+                            ['holdingFuel', 'Holding'],
+                        ] as const).map(([field, label]) => (
+                            <label key={field} className="space-y-1">
+                                <span className="block text-[8px] font-black uppercase tracking-wider text-muted-foreground">{label}</span>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.1"
+                                    value={fuelPolicy[field]}
+                                    onChange={(event) => setFuelPolicy((current) => ({ ...current, [field]: Number(event.target.value) || 0 }))}
+                                    className="h-7 text-center text-xs font-bold"
+                                />
+                            </label>
+                        ))}
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-sky-100 pt-2 text-[10px] font-bold text-slate-700">
+                        <span>Trip {totals.fuel.toFixed(1)}</span>
+                        <span>Alternates {alternateFuel.toFixed(1)}</span>
+                        <span>Allowances {(fuelPolicy.taxiFuel + fuelPolicy.contingencyFuel + fuelPolicy.finalReserveFuel + fuelPolicy.holdingFuel).toFixed(1)}</span>
+                        <span className="text-sky-900">Block fuel {blockFuel.toFixed(1)} {fuelUnit === 'GPH' ? 'GAL' : 'L'}</span>
+                    </div>
+                    {isCommercial && !alternates[0]?.icao ? (
+                        <p className="mt-2 text-[10px] font-medium text-amber-700">Add a primary alternate when required by the flight release policy.</p>
+                    ) : null}
+                </div>
+                        </CardContent>
+                    </Card>
+                ) : null}
             </div>
 
             {/* ── NavLog Table ── */}
