@@ -1,0 +1,145 @@
+name: Release Safeviate to Azure and AWS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: safeviate-production-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  NODE_VERSION: '22'
+  AWS_REGION: af-south-1
+  AWS_EB_APPLICATION_NAME: safeviate-app
+  AWS_EB_ENVIRONMENT_NAME: Safeviate-app-env-2
+  AZURE_WEBAPP_NAME: safeviate-web-app
+
+jobs:
+  build:
+    name: Build release artifacts
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
+      NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+      NEXT_PUBLIC_BUILD_SHA: ${{ github.sha }}
+      NEXT_PUBLIC_BUILD_TIME: ${{ github.run_id }}-${{ github.run_attempt }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAIP_API_KEY: ${{ secrets.OPENAIP_API_KEY }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      MAIL_FROM: ${{ secrets.MAIL_FROM }}
+      AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+      AZURE_STORAGE_CONTAINER_NAME: ${{ secrets.AZURE_STORAGE_CONTAINER_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Build Next.js application
+        run: npm run build
+      - name: Assemble Azure package
+        run: |
+          mkdir -p deploy-azure/.next
+          cp -R .next/standalone/. deploy-azure/
+          cp -R .next/static deploy-azure/.next/static
+          if [ -d public ]; then cp -R public deploy-azure/public; fi
+      - name: Assemble Elastic Beanstalk package
+        run: |
+          mkdir -p deploy-aws/.next/static deploy-aws/prisma deploy-aws/.platform/hooks/postdeploy
+          cp -R .next/standalone/. deploy-aws/
+          cp -R .next/static deploy-aws/.next/static
+          if [ -d public ]; then cp -R public deploy-aws/public; fi
+          cp prisma/schema.prisma deploy-aws/prisma/schema.prisma
+          cp scripts/aws/prisma.config.ts deploy-aws/prisma.config.ts
+          cp -R node_modules/prisma deploy-aws/node_modules/prisma
+          cp -R node_modules/@prisma deploy-aws/node_modules/@prisma
+          curl --fail --silent --show-error --location --output deploy-aws/global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+          printf '#!/bin/bash\nset -euo pipefail\nchmod +x node_modules/@prisma/engines/schema-engine-rhel-openssl-3.0.x\nnode node_modules/prisma/build/index.js db push\n' > deploy-aws/.platform/hooks/postdeploy/01-prisma-db-push.sh
+          chmod +x deploy-aws/.platform/hooks/postdeploy/01-prisma-db-push.sh
+          printf 'web: node server.js\n' > deploy-aws/Procfile
+          (cd deploy-aws && zip -qr ../safeviate-app-eb.zip .)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: azure-webapp-package
+          path: deploy-azure
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aws-elastic-beanstalk-package
+          path: safeviate-app-eb.zip
+          if-no-files-found: error
+
+  deploy-azure:
+    name: Deploy Azure App Service
+    needs: build
+    runs-on: ubuntu-latest
+    environment: azure-production
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install migration dependencies
+        run: npm ci --ignore-scripts
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Apply Azure database migrations
+        run: npx prisma migrate deploy
+      - name: Sign in to Azure with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: azure-webapp-package
+          path: deploy-azure
+      - name: Deploy the release artifact
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          package: deploy-azure
+
+  deploy-aws:
+    name: Deploy AWS Elastic Beanstalk
+    needs: build
+    runs-on: ubuntu-latest
+    environment: aws-production
+    steps:
+      - name: Authenticate to AWS with GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: aws-elastic-beanstalk-package
+          path: release
+      - name: Upload and deploy the same release commit
+        env:
+          VERSION_LABEL: github-${{ github.sha }}
+        run: |
+          ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+          BUCKET="elasticbeanstalk-${AWS_REGION}-${ACCOUNT_ID}"
+          KEY="resources/environments/application_versions/${VERSION_LABEL}.zip"
+          aws s3 cp release/safeviate-app-eb.zip "s3://${BUCKET}/${KEY}"
+          aws elasticbeanstalk create-application-version --application-name "$AWS_EB_APPLICATION_NAME" --version-label "$VERSION_LABEL" --source-bundle "S3Bucket=${BUCKET},S3Key=${KEY}" --process
+          aws elasticbeanstalk update-environment --environment-name "$AWS_EB_ENVIRONMENT_NAME" --version-label "$VERSION_LABEL"
+          aws elasticbeanstalk wait environment-updated --environment-names "$AWS_EB_ENVIRONMENT_NAME"

@@ -1,14 +1,10 @@
-name: Build and deploy Next.js app to Azure Web App
-# Azure CI trigger refresh 10
+name: Legacy Azure deployment workflow
 
 concurrency:
   group: safeviate-azure-webapp
   cancel-in-progress: false
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -17,6 +13,7 @@ permissions:
 
 jobs:
   build-and-deploy:
+    # Production deployments are coordinated by release-production.yml.
     runs-on: ubuntu-latest
     env:
       AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
