@@ -123,6 +123,16 @@ jobs:
     runs-on: ubuntu-latest
     environment: aws-production
     steps:
+      - name: Show AWS OIDC identity claims
+        shell: bash
+        run: |
+          token="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r '.value')"
+          TOKEN="$token" node <<'NODE'
+          const payload = JSON.parse(Buffer.from(process.env.TOKEN.split('.')[1], 'base64url'));
+          for (const key of ['iss', 'aud', 'sub']) console.log(`${key}: ${payload[key]}`);
+          NODE
       - name: Authenticate to AWS with GitHub OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
