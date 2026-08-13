@@ -144,7 +144,7 @@ jobs:
           path: release
       - name: Upload and deploy the same release commit
         env:
-          VERSION_LABEL: github-${{ github.sha }}
+          VERSION_LABEL: github-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
           BUCKET="elasticbeanstalk-${AWS_REGION}-${ACCOUNT_ID}"
