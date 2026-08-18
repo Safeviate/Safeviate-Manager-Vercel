@@ -69,6 +69,7 @@ jobs:
           if [ -d public ]; then cp -R public deploy-azure/public; fi
       - name: Assemble Elastic Beanstalk package
         run: |
+          set -x
           mkdir -p deploy-aws/.next/static deploy-aws/prisma deploy-aws/.platform/hooks/postdeploy
           cp -R .next/standalone/. deploy-aws/
           cp -R .next/static deploy-aws/.next/static
