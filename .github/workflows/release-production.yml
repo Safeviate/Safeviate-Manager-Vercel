@@ -49,7 +49,7 @@ jobs:
         # The EB instance runs Amazon Linux 2023 (OpenSSL 3). Generate and
         # package that CLI engine on the Linux build runner so the postdeploy
         # db push does not look for an engine that is absent from the zip.
-        run: PRISMA_CLI_BINARY_TARGETS=native,rhel-openssl-3.0.x npx prisma generate
+        run: PRISMA_CLI_BINARY_TARGETS=rhel-openssl-3.0.x npx prisma generate
       - name: Build Next.js application
         run: npm run build
       - name: Assemble Azure package
