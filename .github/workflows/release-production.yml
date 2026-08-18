@@ -46,7 +46,10 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
       - name: Generate Prisma client
-        run: npx prisma generate
+        # The EB instance runs Amazon Linux 2023 (OpenSSL 3). Generate and
+        # package that CLI engine on the Linux build runner so the postdeploy
+        # db push does not look for an engine that is absent from the zip.
+        run: PRISMA_CLI_BINARY_TARGETS=native,rhel-openssl-3.0.x npx prisma generate
       - name: Build Next.js application
         run: npm run build
       - name: Assemble Azure package
@@ -65,8 +68,9 @@ jobs:
           cp scripts/aws/prisma.config.ts deploy-aws/prisma.config.ts
           cp -R node_modules/prisma deploy-aws/node_modules/prisma
           cp -R node_modules/@prisma deploy-aws/node_modules/@prisma
+          test -f deploy-aws/node_modules/@prisma/engines/schema-engine-rhel-openssl-3.0.x
           curl --fail --silent --show-error --location --output deploy-aws/global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
-          printf '#!/bin/bash\nset -euo pipefail\nchmod +x node_modules/@prisma/engines/schema-engine-rhel-openssl-3.0.x\nnode node_modules/prisma/build/index.js db push\n' > deploy-aws/.platform/hooks/postdeploy/01-prisma-db-push.sh
+          printf '#!/bin/bash\nset -euo pipefail\nnode node_modules/prisma/build/index.js db push\n' > deploy-aws/.platform/hooks/postdeploy/01-prisma-db-push.sh
           chmod +x deploy-aws/.platform/hooks/postdeploy/01-prisma-db-push.sh
           printf 'web: node server.js\n' > deploy-aws/Procfile
           (cd deploy-aws && zip -qr ../safeviate-app-eb.zip .)

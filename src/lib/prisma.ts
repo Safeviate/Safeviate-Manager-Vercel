@@ -2,7 +2,9 @@ import { PrismaClient } from '@/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { assertRequiredEnv } from '@/lib/server/env';
 import { normalizePostgresConnectionString } from '@/lib/server/postgres-url';
+import { existsSync, readFileSync } from 'node:fs';
 import net from 'node:net';
+import { Pool } from 'pg';
 
 const normalizedDatabaseUrl = normalizePostgresConnectionString(process.env.DATABASE_URL);
 const normalizedUnpooledDatabaseUrl = normalizePostgresConnectionString(process.env.DATABASE_URL_UNPOOLED);
@@ -45,6 +47,37 @@ const getDatabaseEndpoint = () => {
   }
 };
 
+function createPrismaAdapter() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error('DATABASE_URL is required to create the database adapter.');
+  }
+
+  const url = new URL(connectionString);
+  const rdsCaBundlePath = '/var/app/current/global-bundle.pem';
+  const usesAmazonRds = url.hostname.endsWith('.rds.amazonaws.com');
+
+  if (usesAmazonRds && existsSync(rdsCaBundlePath)) {
+    // Prisma's pg adapter does not reliably pass sslrootcert from a connection
+    // string into node-postgres. Load Amazon's RDS CA bundle explicitly instead.
+    url.searchParams.delete('sslmode');
+    url.searchParams.delete('sslrootcert');
+
+    return new PrismaPg(
+      new Pool({
+        connectionString: url.toString(),
+        ssl: {
+          ca: readFileSync(rdsCaBundlePath, 'utf8'),
+          rejectUnauthorized: true,
+        },
+      }),
+      { disposeExternalPool: true }
+    );
+  }
+
+  return new PrismaPg({ connectionString });
+}
+
 const probeDatabaseEndpoint = async (timeoutMs = 1500) => {
   const endpoint = getDatabaseEndpoint();
   if (!endpoint?.host) {
@@ -74,9 +107,7 @@ const probeDatabaseEndpoint = async (timeoutMs = 1500) => {
 export const prisma =
   global.__prisma ??
   new PrismaClient({
-    adapter: new PrismaPg({
-      connectionString: process.env.DATABASE_URL,
-    }),
+    adapter: createPrismaAdapter(),
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   });
 
