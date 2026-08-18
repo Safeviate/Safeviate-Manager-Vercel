@@ -72,7 +72,10 @@ jobs:
           set -x
           mkdir -p deploy-aws/.next/static deploy-aws/prisma deploy-aws/.platform/hooks/postdeploy
           cp -R .next/standalone/. deploy-aws/
-          cp -R .next/static deploy-aws/.next/static
+          # Copy the directory contents. Copying the directory itself here creates
+          # `.next/static/static`, leaving the client chunks at their expected
+          # `/_next/static/...` paths unavailable.
+          cp -R .next/static/. deploy-aws/.next/static
           if [ -d public ]; then cp -R public deploy-aws/public; fi
           cp prisma/schema.prisma deploy-aws/prisma/schema.prisma
           cp scripts/aws/prisma.config.ts deploy-aws/prisma.config.ts
