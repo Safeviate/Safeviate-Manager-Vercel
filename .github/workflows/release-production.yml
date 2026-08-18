@@ -57,6 +57,10 @@ jobs:
         run: npx prisma generate
       - name: Build Next.js application
         run: npm run build
+      - name: Download and verify RDS CA bundle
+        run: |
+          curl --fail --show-error --location --retry 3 --retry-all-errors --connect-timeout 20 --output global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+          test -s global-bundle.pem
       - name: Assemble Azure package
         run: |
           mkdir -p deploy-azure/.next
@@ -74,7 +78,7 @@ jobs:
           cp -R node_modules/prisma deploy-aws/node_modules/prisma
           cp -R node_modules/@prisma deploy-aws/node_modules/@prisma
           test -f deploy-aws/node_modules/@prisma/engines/schema-engine-rhel-openssl-3.0.x
-          curl --fail --silent --show-error --location --output deploy-aws/global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+          cp global-bundle.pem deploy-aws/global-bundle.pem
           printf '#!/bin/bash\nset -euo pipefail\nnode node_modules/prisma/build/index.js db push\n' > deploy-aws/.platform/hooks/postdeploy/01-prisma-db-push.sh
           chmod +x deploy-aws/.platform/hooks/postdeploy/01-prisma-db-push.sh
           printf 'web: node server.js\n' > deploy-aws/Procfile
