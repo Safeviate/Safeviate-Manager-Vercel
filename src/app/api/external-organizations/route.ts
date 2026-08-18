@@ -87,18 +87,24 @@ export async function GET(request: Request) {
     const tenantId = await getTenantId(request);
     if (!tenantId) return NextResponse.json({ organizations: [] }, { status: 200 });
     await ensureExternalOrganizationsSchema();
+    const typeParam = new URL(request.url).searchParams.get('type');
+    const requestedType = typeParam === 'supplier' ? 'supplier' : typeParam === 'all' ? 'all' : 'client';
 
     const { organizations, bookingRows } = await prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRawUnsafe<{ id: string; data: unknown }[]>(
         `SELECT id, data FROM external_organizations WHERE tenant_id = $1 ORDER BY created_at ASC FOR UPDATE`,
         tenantId
       );
+      const filteredRows = requestedType === 'all'
+        ? rows
+        : rows.filter((row) => (toRecord(row.data).recordType === 'supplier') === (requestedType === 'supplier'));
       let nextNumber = rows.reduce((max, row) => Math.max(max, getClientNumber(toRecord(row.data).clientNumber)), 0) + 1;
       const normalized = [] as Record<string, unknown>[];
 
-      for (const row of rows) {
-        const data: Record<string, unknown> = { ...toRecord(row.data), id: row.id };
-        if (!getClientNumber(data.clientNumber)) {
+      for (const row of filteredRows) {
+        const existingRecordType = toRecord(row.data).recordType === 'supplier' ? 'supplier' : 'client';
+        const data: Record<string, unknown> = { ...toRecord(row.data), id: row.id, recordType: existingRecordType };
+        if (existingRecordType === 'client' && !getClientNumber(data.clientNumber)) {
           data.clientNumber = formatClientNumber(nextNumber++);
           await tx.$executeRawUnsafe(
             `UPDATE external_organizations SET data = $2::jsonb, updated_at = NOW() WHERE id = $1 AND tenant_id = $3`,
@@ -145,7 +151,8 @@ export async function POST(request: Request) {
     const incoming = body?.organization ?? {};
     const copyCoherenceMatrix = body?.copyCoherenceMatrix !== false;
     const id = incoming.id || randomUUID();
-    let data: Record<string, unknown> = { ...incoming, id };
+    const recordType = incoming.recordType === 'supplier' ? 'supplier' : 'client';
+    let data: Record<string, unknown> = { ...incoming, id, recordType };
 
     const copiedItemCount = await prisma.$transaction(async (tx) => {
       const existingRows = await tx.$queryRawUnsafe<{ data: unknown }[]>(
@@ -155,7 +162,10 @@ export async function POST(request: Request) {
       data = {
         ...incoming,
         id,
-        clientNumber: String(incoming.clientNumber || '').trim() || allocateNextClientNumber(existingRows),
+        recordType,
+        ...(recordType === 'client'
+          ? { clientNumber: String(incoming.clientNumber || '').trim() || allocateNextClientNumber(existingRows) }
+          : { clientNumber: undefined }),
       };
       await tx.$executeRawUnsafe(
         `INSERT INTO external_organizations (id, tenant_id, data, created_at, updated_at)

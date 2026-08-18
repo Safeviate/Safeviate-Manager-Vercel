@@ -82,7 +82,7 @@ export function StartAuditDialog({
         if (providedOrganizations && providedOrganizations.length > 0) {
           setOrganizations(providedOrganizations);
         } else {
-          void fetch('/api/external-organizations', { cache: 'no-store' })
+          void fetch('/api/external-organizations?type=all', { cache: 'no-store' })
             .then((response) => response.json())
             .then((payload) => setOrganizations(Array.isArray(payload.organizations) ? payload.organizations : []))
             .catch(() => setOrganizations([]));

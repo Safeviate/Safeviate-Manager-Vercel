@@ -243,7 +243,7 @@ export function TemplateEditorDialog({
     let cancelled = false;
     const loadOrganizations = async () => {
       try {
-        const response = await fetch('/api/external-organizations', { cache: 'no-store' });
+        const response = await fetch('/api/external-organizations?type=all', { cache: 'no-store' });
         const payload = await response.json().catch(() => ({ organizations: [] }));
         if (!cancelled && Array.isArray(payload.organizations)) {
           setOrganizations(payload.organizations);

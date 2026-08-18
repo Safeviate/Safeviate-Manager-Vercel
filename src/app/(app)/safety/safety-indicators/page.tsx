@@ -52,7 +52,7 @@ export default function SafetyIndicatorsPage() {
         const [reportsRes, bookingsRes, orgsRes, spiRes] = await Promise.all([
           fetch('/api/safety-reports', { cache: 'no-store' }),
           fetch('/api/bookings', { cache: 'no-store' }),
-          fetch('/api/external-organizations', { cache: 'no-store' }),
+          fetch('/api/external-organizations?type=all', { cache: 'no-store' }),
           fetch('/api/spi-configurations', { cache: 'no-store' }),
         ]);
 

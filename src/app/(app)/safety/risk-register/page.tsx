@@ -185,7 +185,7 @@ export default function RiskRegisterPage() {
         const [personnelResponse, riskResponse, orgResponse] = await Promise.all([
           fetch('/api/personnel', { cache: 'no-store' }),
           fetch('/api/risk-register', { cache: 'no-store' }),
-          fetch('/api/external-organizations', { cache: 'no-store' }),
+          fetch('/api/external-organizations?type=all', { cache: 'no-store' }),
         ]);
         const [personnelPayload, riskPayload, orgPayload] = await Promise.all([
           personnelResponse.json().catch(() => ({ personnel: [] })),

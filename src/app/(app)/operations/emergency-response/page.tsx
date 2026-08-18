@@ -41,7 +41,7 @@ export default function EmergencyResponsePage() {
   }
 
   useEffect(() => {
-    fetch('/api/external-organizations', { cache: 'no-store' })
+    fetch('/api/external-organizations?type=all', { cache: 'no-store' })
       .then(async (response) => {
         const payload = response.ok ? await response.json().catch(() => ({ organizations: [] })) : { organizations: [] };
         setOrganizations((payload.organizations || []) as ExternalOrganization[]);

@@ -114,7 +114,7 @@ export default function TaskTrackerPage() {
       try {
         const [summaryRes, orgsRes, usersRes] = await Promise.all([
           fetch('/api/dashboard-summary', { cache: 'no-store' }),
-          fetch('/api/external-organizations', { cache: 'no-store' }),
+          fetch('/api/external-organizations?type=all', { cache: 'no-store' }),
           fetch('/api/users', { cache: 'no-store' }),
         ]);
         const [summary, orgsPayload, usersPayload] = await Promise.all([

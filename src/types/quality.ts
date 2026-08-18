@@ -234,6 +234,7 @@ export interface ExternalOrganizationBillingSummary {
 
 export interface ExternalOrganization {
     id: string;
+    recordType?: 'client' | 'supplier';
     clientNumber?: string;
     name: string;
     roles?: ExternalOrganizationRole[];

@@ -39,7 +39,7 @@ export default function AuditChecklistsManager() {
           fetch(`/api/quality-audit-templates${templateView === 'archived' ? '?view=archived' : ''}`, { cache: 'no-store' }),
           fetch('/api/personnel', { cache: 'no-store' }),
           fetch('/api/departments', { cache: 'no-store' }),
-          fetch('/api/external-organizations', { cache: 'no-store' }),
+          fetch('/api/external-organizations?type=all', { cache: 'no-store' }),
         ]);
         const [templatesPayload, personnelPayload, deptsPayload, organizationsPayload] = await Promise.all([
           templatesResponse.json().catch(() => null),

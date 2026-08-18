@@ -692,7 +692,7 @@ export default function SafetyReportsPage() {
   useEffect(() => {
     const loadOrganizations = async () => {
       try {
-        const response = await fetch('/api/external-organizations', { cache: 'no-store' });
+        const response = await fetch('/api/external-organizations?type=all', { cache: 'no-store' });
         const payload = await response.json().catch(() => ({ organizations: [] }));
         setOrganizations(Array.isArray(payload.organizations) ? payload.organizations : []);
       } catch {

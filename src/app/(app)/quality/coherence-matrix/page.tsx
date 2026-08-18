@@ -776,7 +776,7 @@ export default function CoherenceMatrixPage() {
       const [matrixResponse, personnelResponse, orgResponse] = await Promise.all([
         fetch(`/api/compliance-matrix?tenantId=${encodeURIComponent(resolvedTenantId)}`, { cache: 'no-store' }),
         fetch('/api/personnel', { cache: 'no-store' }),
-        fetch('/api/external-organizations', { cache: 'no-store' }),
+        fetch('/api/external-organizations?type=all', { cache: 'no-store' }),
       ]);
 
       const [matrixPayload, personnelPayload, orgPayload] = await Promise.all([

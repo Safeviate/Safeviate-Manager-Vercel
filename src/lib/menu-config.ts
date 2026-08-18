@@ -389,8 +389,14 @@ export const menuConfig: MenuItem[] = [
       },
       {
         href: '/admin/external',
-        label: 'External Companies',
-        description: 'Manage third-party organizations.',
+        label: 'Clients',
+        description: 'Manage client profiles, billing, and booking history.',
+        permissionId: 'admin-external-orgs-manage',
+      },
+      {
+        href: '/admin/external-suppliers',
+        label: 'External Suppliers',
+        description: 'Register supplier names for third-party audits.',
         permissionId: 'admin-external-orgs-manage',
       },
       {

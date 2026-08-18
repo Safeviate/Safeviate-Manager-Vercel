@@ -73,7 +73,7 @@ export default function ExternalCompaniesPage() {
   const loadOrgs = useCallback(async () => {
     setIsLoadingOrgs(true);
     try {
-      const response = await fetch('/api/external-organizations', { cache: 'no-store' });
+      const response = await fetch('/api/external-organizations?type=client', { cache: 'no-store' });
       const payload = await response.json().catch(() => ({ organizations: [] }));
       setOrganizations(Array.isArray(payload.organizations) ? payload.organizations : []);
     } catch (e) {
@@ -117,6 +117,7 @@ export default function ExternalCompaniesPage() {
     try {
         const organization: ExternalOrganization = {
           id: editingOrg?.id || crypto.randomUUID(),
+          recordType: 'client',
           name,
           clientNumber: editingOrg?.clientNumber,
           contactName,
