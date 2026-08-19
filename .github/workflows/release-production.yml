@@ -64,12 +64,16 @@ jobs:
           test -s global-bundle.pem
       - name: Assemble Azure package
         run: |
-          mkdir -p deploy-azure/.next
           cp -R .next/standalone/. deploy-azure/
-          # Copy the directory contents. Copying the directory itself creates
-          # `.next/static/static`, which leaves current client chunks unavailable.
-          cp -R .next/static/. deploy-azure/.next/static
+          # Azure's zip deployment omits hidden directories such as `.next`.
+          # Carry the complete build under a normal name; startup.sh restores
+          # it before the standalone server begins.
+          rm -rf deploy-azure/.next
+          mkdir -p deploy-azure/next
+          cp -R .next/. deploy-azure/next
           if [ -d public ]; then cp -R public deploy-azure/public; fi
+          printf '%s\n' '#!/bin/sh' 'set -eu' 'if [ -d next ]; then rm -rf .next && mv next .next; fi' 'exec node server.js' > deploy-azure/startup.sh
+          chmod +x deploy-azure/startup.sh
       - name: Assemble Elastic Beanstalk package
         run: |
           set -x
@@ -141,7 +145,7 @@ jobs:
           az webapp config set \
             --resource-group "$AZURE_RESOURCE_GROUP" \
             --name "$AZURE_WEBAPP_NAME" \
-            --startup-file "node server.js"
+            --startup-file "./startup.sh"
       - name: Replace Azure App Service release files
         shell: bash
         run: |
