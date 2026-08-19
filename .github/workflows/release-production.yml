@@ -134,6 +134,14 @@ jobs:
         with:
           name: azure-webapp-package
           path: deploy-azure
+      - name: Configure App Service startup command
+        run: |
+          # The production artifact is a pre-built Next.js standalone server,
+          # so App Service must execute its generated entry point directly.
+          az webapp config set \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_WEBAPP_NAME" \
+            --startup-file "node server.js"
       - name: Replace Azure App Service release files
         shell: bash
         run: |
