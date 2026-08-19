@@ -65,7 +65,9 @@ jobs:
         run: |
           mkdir -p deploy-azure/.next
           cp -R .next/standalone/. deploy-azure/
-          cp -R .next/static deploy-azure/.next/static
+          # Copy the directory contents. Copying the directory itself creates
+          # `.next/static/static`, which leaves current client chunks unavailable.
+          cp -R .next/static/. deploy-azure/.next/static
           if [ -d public ]; then cp -R public deploy-azure/public; fi
       - name: Assemble Elastic Beanstalk package
         run: |
