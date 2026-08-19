@@ -19,6 +19,7 @@ env:
   AWS_EB_APPLICATION_NAME: safeviate-app
   AWS_EB_ENVIRONMENT_NAME: Safeviate-app-env-2
   AZURE_WEBAPP_NAME: safeviate-web-app
+  AZURE_RESOURCE_GROUP: safeviate-dev
 
 jobs:
   build:
@@ -133,11 +134,20 @@ jobs:
         with:
           name: azure-webapp-package
           path: deploy-azure
-      - name: Deploy the release artifact
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          package: deploy-azure
+      - name: Replace Azure App Service release files
+        shell: bash
+        run: |
+          # OneDeploy previously merged the new artifact with wwwroot
+          # (CleanOutputPath=False), allowing obsolete Next.js chunks to remain.
+          # Deploy a root-level zip and explicitly clean before restarting.
+          (cd deploy-azure && zip -qr ../azure-webapp.zip .)
+          az webapp deploy \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_WEBAPP_NAME" \
+            --src-path azure-webapp.zip \
+            --type zip \
+            --clean true \
+            --restart true
 
   deploy-aws:
     name: Deploy AWS Elastic Beanstalk
