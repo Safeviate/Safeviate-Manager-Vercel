@@ -1,7 +1,7 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getTenantIdForRoute } from '@/lib/server/session-tenant';
-import { ensureManagementOfChangeSchema } from '@/lib/server/bootstrap-db';
+import { ensureExternalOrganizationsSchema, ensureManagementOfChangeSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -11,6 +11,12 @@ function toStableJson(value: unknown) {
   return JSON.stringify(value ?? null);
 }
 
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
 async function getTenantId(request: Request) {
   return getTenantIdForRoute(request);
 }
@@ -18,8 +24,9 @@ async function getTenantId(request: Request) {
 export async function GET(request: Request) {
   try {
     const tenantId = await getTenantId(request);
-    if (!tenantId) return NextResponse.json({ mocs: [] }, { status: 200 });
+    if (!tenantId) return NextResponse.json({ mocs: [], organizations: [] }, { status: 200 });
     await ensureManagementOfChangeSchema();
+    await ensureExternalOrganizationsSchema();
 
     const mocId = new URL(request.url).searchParams.get('mocId');
     if (mocId) {
@@ -38,12 +45,19 @@ export async function GET(request: Request) {
       `SELECT data FROM management_of_change WHERE tenant_id = $1 ORDER BY created_at ASC`,
       tenantId
     );
+    const externalOrganizationRows = await prisma.$queryRawUnsafe<{ id: string; data: unknown }[]>(
+      `SELECT id, data FROM external_organizations WHERE tenant_id = $1 ORDER BY created_at ASC`,
+      tenantId
+    );
+    const organizations = externalOrganizationRows
+      .filter((row) => toRecord(row.data).recordType === 'supplier')
+      .map((row) => ({ ...toRecord(row.data), id: row.id, recordType: 'supplier' as const }));
 
-    return NextResponse.json({ mocs: rows.map((row) => row.data) }, { status: 200 });
+    return NextResponse.json({ mocs: rows.map((row) => row.data), organizations }, { status: 200 });
   } catch (error) {
     console.error('[management-of-change] fallback to empty payload:', error);
     const mocId = new URL(request.url).searchParams.get('mocId');
-    return NextResponse.json(mocId ? { moc: null } : { mocs: [] }, { status: 200 });
+    return NextResponse.json(mocId ? { moc: null } : { mocs: [], organizations: [] }, { status: 200 });
   }
 }
 
