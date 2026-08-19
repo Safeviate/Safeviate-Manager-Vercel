@@ -1,4 +1,5 @@
-const CACHE_VERSION = 'v5';
+// Increment this when a production release must retire cached client bundles.
+const CACHE_VERSION = 'v6';
 const STATIC_CACHE = `safeviate-static-${CACHE_VERSION}`;
 const DATA_CACHE = `safeviate-data-${CACHE_VERSION}`;
 const NAV_CACHE = `safeviate-nav-${CACHE_VERSION}`;
