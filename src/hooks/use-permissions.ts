@@ -64,13 +64,13 @@ export const usePermissions = () => {
     (permissionId: string) => {
       if (isLoading || !userProfile) return false;
 
-      if (effectivePermissions.has('*')) {
+      if (isSafeviateMasterSuperUser || effectivePermissions.has('*')) {
         return true;
       }
 
       return hasHierarchicalPermission(effectivePermissions, permissionId, deniedPermissions);
     },
-    [deniedPermissions, effectivePermissions, isLoading, userProfile]
+    [deniedPermissions, effectivePermissions, isLoading, isSafeviateMasterSuperUser, userProfile]
   );
 
   const canAccessMenuItem = useCallback(

@@ -223,6 +223,12 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'quality-view',
     subItems: [
       {
+        href: '/quality/checklists',
+        label: 'Checklists',
+        description: 'Create and complete routine quality checklists.',
+        permissionId: 'quality-checklists-view',
+      },
+      {
         href: '/quality/audits',
         label: 'Audits',
         description: 'Review audit records and templates.',

@@ -446,7 +446,7 @@ export default function AuditsPage() {
                             variant={activeTab === 'checklists' ? 'default' : 'outline'}
                             className={HEADER_COMPACT_CONTROL_CLASS}
                         >
-                            <Link href={`/quality/audit-checklists?org=${encodeURIComponent(activeOrgTab)}`}>Audit Checklists</Link>
+                            <Link href={`/quality/audit-checklists?org=${encodeURIComponent(activeOrgTab)}`}>Audit Templates</Link>
                         </Button>
                         <Button
                             asChild

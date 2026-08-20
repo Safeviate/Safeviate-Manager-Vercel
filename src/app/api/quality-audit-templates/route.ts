@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ templates }, { status: 200 });
   } catch (error) {
     console.error('[quality-audit-templates] failed to load tenant templates:', error);
-    return NextResponse.json({ error: 'Unable to load audit checklist templates.' }, { status: 500 });
+    return NextResponse.json({ error: 'Unable to load audit templates.' }, { status: 500 });
   }
 }
 
@@ -66,7 +66,7 @@ export async function DELETE(request: Request) {
   const config = await getConfig(tenantId);
   const templates = Array.isArray(config['quality-audit-templates']) ? (config['quality-audit-templates'] as Array<{ id: string } & Record<string, unknown>>) : [];
   const existing = templates.find((template) => template.id === id);
-  if (!existing) return NextResponse.json({ error: 'Audit checklist template not found.' }, { status: 404 });
+  if (!existing) return NextResponse.json({ error: 'Audit template not found.' }, { status: 404 });
   const session = await getServerSession(authOptions);
   const archivedTemplates = Array.isArray(config['archived-quality-audit-templates'])
     ? (config['archived-quality-audit-templates'] as Array<{ id: string } & Record<string, unknown>>)
@@ -115,7 +115,7 @@ export async function PATCH(request: Request) {
     ? (config['archived-quality-audit-templates'] as Array<{ id: string } & Record<string, unknown>>)
     : [];
   const archivedTemplate = archivedTemplates.find((template) => template.id === id);
-  if (!archivedTemplate) return NextResponse.json({ error: 'Archived audit checklist template not found.' }, { status: 404 });
+  if (!archivedTemplate) return NextResponse.json({ error: 'Archived audit template not found.' }, { status: 404 });
   const { archivedAt: _archivedAt, ...restoredTemplate } = archivedTemplate;
   const nextTemplates = templates.some((template) => template.id === id)
     ? templates.map((template) => template.id === id ? restoredTemplate : template)

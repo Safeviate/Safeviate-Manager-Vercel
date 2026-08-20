@@ -75,6 +75,50 @@ export interface QualityAuditChecklistTemplate {
     sections: ChecklistSection[];
 }
 
+// Quality checklists are operational completion records. They deliberately do
+// not use audit findings, CAPs, auditors, auditees, or audit sign-off.
+export type QualityChecklistItemType = 'Checkbox' | 'YesNoNA' | 'Textbox' | 'Number' | 'Date';
+
+export interface QualityChecklistItem {
+    id: string;
+    text: string;
+    type: QualityChecklistItemType;
+}
+
+export interface QualityChecklistSection {
+    id: string;
+    title: string;
+    items: QualityChecklistItem[];
+}
+
+export interface QualityChecklistTemplate {
+    id: string;
+    title: string;
+    category?: string;
+    sections: QualityChecklistSection[];
+    archivedAt?: string;
+}
+export type QualityChecklistStatus = 'In Progress' | 'Completed' | 'Archived';
+
+export interface QualityChecklistResponse {
+    checklistItemId: string;
+    value?: boolean | string;
+    notes?: string;
+}
+
+export interface QualityChecklistRun {
+    id: string;
+    templateId: string;
+    templateTitle: string;
+    title: string;
+    status: QualityChecklistStatus;
+    startedAt: string;
+    completedAt?: string;
+    completedById?: string;
+    completedByName?: string;
+    responses: QualityChecklistResponse[];
+}
+
 export type { CorrectiveAction } from './safety-report';
 
 export interface QualityFinding {

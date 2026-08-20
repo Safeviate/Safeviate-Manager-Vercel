@@ -48,7 +48,7 @@ export default function AuditChecklistsManager() {
           organizationsResponse.json().catch(() => ({ organizations: [] })),
         ]);
         if (!templatesResponse.ok) {
-          throw new Error(typeof templatesPayload?.error === 'string' ? templatesPayload.error : 'Unable to load audit checklist templates.');
+          throw new Error(typeof templatesPayload?.error === 'string' ? templatesPayload.error : 'Unable to load audit templates.');
         }
         setLoadError(null);
         setTemplates(Array.isArray(templatesPayload.templates) ? templatesPayload.templates : []);
@@ -57,7 +57,7 @@ export default function AuditChecklistsManager() {
         setOrganizations(Array.isArray(organizationsPayload.organizations) ? organizationsPayload.organizations : []);
     } catch (e) {
         console.error('Failed to load audit template data', e);
-        setLoadError(e instanceof Error ? e.message : 'Unable to load audit checklist templates.');
+        setLoadError(e instanceof Error ? e.message : 'Unable to load audit templates.');
     } finally {
         setIsLoading(false);
     }
@@ -80,10 +80,10 @@ export default function AuditChecklistsManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: template.id }),
       });
-      if (!response.ok) throw new Error('Failed to restore audit checklist template.');
+      if (!response.ok) throw new Error('Failed to restore audit template.');
       await loadData();
     } catch (error) {
-      console.error('Failed to restore audit checklist template', error);
+      console.error('Failed to restore audit template', error);
     }
   };
 
@@ -113,7 +113,7 @@ export default function AuditChecklistsManager() {
     <div className={cn("max-w-[1100px] mx-auto w-full flex flex-col gap-4 px-1 pt-4", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
       <Card className={cn("flex flex-col shadow-none border", isMobile ? "min-h-0 overflow-visible" : "h-full overflow-hidden")}>
         <MainPageHeader 
-          title="Audit Checklists"
+          title="Audit Templates"
           actions={
             <NewChecklistDialog
                 tenantId={tenantId || ''}
@@ -139,7 +139,7 @@ export default function AuditChecklistsManager() {
               variant={activeTab === 'checklists' ? 'default' : 'outline'}
               className={HEADER_COMPACT_CONTROL_CLASS}
             >
-              <Link href="/quality/audit-checklists">Audit Checklists</Link>
+              <Link href="/quality/audit-checklists">Audit Templates</Link>
             </Button>
             <Button
               asChild
@@ -154,7 +154,7 @@ export default function AuditChecklistsManager() {
               className={HEADER_COMPACT_CONTROL_CLASS}
               onClick={() => setTemplateView((view) => view === 'active' ? 'archived' : 'active')}
             >
-              {templateView === 'active' ? 'Archived Checklists' : 'Active Checklists'}
+              {templateView === 'active' ? 'Archived Audit Templates' : 'Active Audit Templates'}
             </Button>
           </div>
         </div>
@@ -196,7 +196,7 @@ export default function AuditChecklistsManager() {
                   </div>
               ) : (
                 <div className="text-center py-20 text-muted-foreground italic uppercase font-bold text-[10px] tracking-widest bg-background rounded-2xl border-2 border-dashed shadow-sm">
-                    No {templateView === 'archived' ? 'archived ' : ''}checklist templates found.
+                    No {templateView === 'archived' ? 'archived ' : ''}audit templates found.
                 </div>
               )}
             </div>

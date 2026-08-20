@@ -10,7 +10,7 @@ const SECTION_DEFINITIONS: Array<{ title: string; resourceIds: string[] }> = [
   { title: 'Bookings', resourceIds: ['bookings'] },
   { title: 'Operations', resourceIds: ['operations', 'operations-alerts', 'operations-documents', 'operations-erp'] },
   { title: 'Safety', resourceIds: ['safety', 'moc', 'risk-register', 'risk-matrix', 'safety-indicators', 'safety-reports'] },
-  { title: 'Quality', resourceIds: ['quality', 'quality-audits', 'quality-audit-schedule', 'quality-templates', 'quality-caps', 'quality-tasks', 'quality-matrix', 'quality-risk-plan'] },
+  { title: 'Quality', resourceIds: ['quality', 'quality-checklists', 'quality-audits', 'quality-audit-schedule', 'quality-templates', 'quality-caps', 'quality-tasks', 'quality-matrix', 'quality-risk-plan'] },
   { title: 'Training', resourceIds: ['training', 'training-debriefs', 'training-exams', 'training-student-instructors', 'training-student-progression'] },
   { title: 'Assets', resourceIds: ['assets'] },
   { title: 'Maintenance', resourceIds: ['maintenance', 'maintenance-workpacks', 'maintenance-defects', 'maintenance-schedule'] },

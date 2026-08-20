@@ -39,6 +39,7 @@ export const permissionsConfig: PermissionResource[] = [
   { id: 'moc', name: 'Management of Change', actions: CRUD_ACTIONS },
 
   { id: 'quality', name: 'Quality', actions: ['view'] },
+  { id: 'quality-checklists', name: 'Checklists', actions: [...CRUD_ACTIONS, 'archive'] },
   { id: 'quality-audits', name: 'Audits', actions: [...CRUD_ACTIONS, 'sign'] },
   // Audit schedules are recovered through archive/restore, not hard deletion.
   { id: 'quality-audit-schedule', name: 'Audit Schedule', actions: ['view', 'create', 'edit', 'archive', 'approve'] },

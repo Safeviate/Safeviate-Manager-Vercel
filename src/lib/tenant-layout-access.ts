@@ -45,6 +45,9 @@ const ROUTE_LAYOUT_REQUIREMENTS: Record<string, TenantLayoutRequirement> = {
     pageIds: ['quality-core'],
     tabs: [{ pageId: 'quality-core', tabId: 'audit-checklists' }],
   },
+  '/quality/checklists': {
+    pageIds: ['quality-core'],
+  },
   '/quality/gap-analyses': {
     pageIds: ['quality-core'],
     tabs: [{ pageId: 'quality-core', tabId: 'gap-analyses' }],

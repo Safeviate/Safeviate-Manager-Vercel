@@ -14,6 +14,11 @@ export type {
 export type {
   QualityAudit,
   QualityAuditChecklistTemplate,
+  QualityChecklistTemplate,
+  QualityChecklistRun,
+  QualityChecklistResponse,
+  QualityChecklistItem,
+  QualityChecklistSection,
   ChecklistSection,
   AuditChecklistItem,
   AuditChecklistItemType,

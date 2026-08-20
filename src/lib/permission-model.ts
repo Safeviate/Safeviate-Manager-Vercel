@@ -32,6 +32,11 @@ const LEGACY_TO_CANONICAL: Record<string, CanonicalPermission> = {
   'quality-audits-edit': { resource: 'quality-audits', tier: 'edit' },
   'quality-audits-manage': { resource: 'quality-audits', tier: 'manage' },
 
+  'quality-checklists-view': { resource: 'quality-checklists', tier: 'view' },
+  'quality-checklists-edit': { resource: 'quality-checklists', tier: 'edit' },
+  'quality-checklists-archive': { resource: 'quality-checklists', tier: 'archive' },
+  'quality-checklists-manage': { resource: 'quality-checklists', tier: 'manage' },
+
   'quality-audit-schedule-view': { resource: 'quality-audit-schedule', tier: 'view' },
   'quality-audit-schedule-edit': { resource: 'quality-audit-schedule', tier: 'edit' },
   'quality-audit-schedule-archive': { resource: 'quality-audit-schedule', tier: 'archive' },

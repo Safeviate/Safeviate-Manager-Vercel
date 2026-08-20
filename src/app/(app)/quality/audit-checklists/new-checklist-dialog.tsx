@@ -36,12 +36,12 @@ export function NewChecklistDialog({
       showTrigger={showTrigger}
       open={open}
       onOpenChange={onOpenChange}
-      templateLabel="Checklist"
-      dialogDescription="Build a reusable checklist with sections and items for conducting quality audits."
+      templateLabel="Audit"
+      dialogDescription="Build a reusable audit template with sections, questions, and criteria for conducting quality audits."
       saveEndpoint="/api/quality-audit-templates"
       successCreateTitle="Template Created"
       successUpdateTitle="Template Updated"
-      successDescription="The checklist template has been saved."
+      successDescription="The audit template has been saved."
       generatedToastTitle="Checklist Generated"
       generatedToastDescription={(count) => `${count} sections have been added to the form.`}
       importedToastTitle="Imported from Matrix"

@@ -53,7 +53,7 @@ export function ChecklistTemplateCard({
         <div>
           <p className="text-xs font-black uppercase tracking-[0.12em] text-foreground">{category}</p>
           <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            {templates.length} checklist{templates.length === 1 ? '' : 's'}
+            {templates.length} audit template{templates.length === 1 ? '' : 's'}
           </p>
         </div>
       </div>
@@ -71,7 +71,7 @@ export function ChecklistTemplateCard({
                 <div className="min-w-0">
                   <p className="truncate text-sm font-black text-foreground">{template.title}</p>
                   <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
-                    Audit checklist template
+                    Reusable audit template
                   </p>
                 </div>
               </div>
