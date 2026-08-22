@@ -208,10 +208,6 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                                             <WandSparkles className="mr-2 h-4 w-4 text-primary" />
                                             AI Analyze Strategy
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => implementationFormRef.current?.addPhase()}>
-                                            <PlusCircle className="mr-2 h-4 w-4 text-emerald-600" />
-                                            Add New Phase
-                                        </DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => implementationFormRef.current?.submit()} className="font-bold text-emerald-700">
                                             <ShieldCheck className="mr-2 h-4 w-4" />
                                             Save Strategy
@@ -247,16 +243,6 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                                         >
                                             <WandSparkles className="h-3.5 w-3.5 text-primary" />
                                             AI Analyze
-                                        </Button>
-                                        <Button 
-                                            type="button" 
-                                            variant="outline" 
-                                            size="default" 
-                                            onClick={() => implementationFormRef.current?.addPhase()} 
-                                            className="h-8 gap-1.5 px-3 text-[9px] font-black uppercase tracking-[0.16em]"
-                                        >
-                                            <PlusCircle className="h-3.5 w-3.5 text-emerald-600" />
-                                            Add Phase
                                         </Button>
                                         <Button 
                                             type="button" 

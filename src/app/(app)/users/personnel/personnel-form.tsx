@@ -205,7 +205,7 @@ export function PersonnelForm({
           title: 'User Created',
           description: useManualPassword
             ? 'The account has been created with the manual password you entered.'
-            : 'The account has been created and the welcome email was sent.',
+            : 'The account has been created. Send the password setup link manually from the user profile.',
         });
       }
       
@@ -378,11 +378,13 @@ export function PersonnelForm({
     return (
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>{trigger}</DialogTrigger>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{existingPersonnel ? 'Edit User Profile' : 'Create User'}</DialogTitle>
             <DialogDescription>
-              {existingPersonnel ? 'Update system permissions and metadata.' : 'Create the tenant account and either send the welcome email or set a password manually.'}
+              {existingPersonnel
+                ? 'Update system permissions and metadata.'
+                : 'Create the tenant account, then send the password setup link manually or set a password manually.'}
             </DialogDescription>
           </DialogHeader>
           {formFields}

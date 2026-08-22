@@ -6,7 +6,6 @@ import { isDatabaseAvailable, prisma } from '@/lib/prisma';
 import { Prisma } from '@/generated/prisma/client';
 import { invalidatePersonnelDirectoryCaches } from '@/lib/server/route-cache';
 import { createPasswordSetupInvite } from '@/lib/server/password-setup';
-import { sendWelcomeEmail } from '@/lib/server/mail';
 import { hasHierarchicalPermission } from '@/lib/permission-model';
 
 export async function POST(request: Request) {
@@ -189,42 +188,12 @@ export async function POST(request: Request) {
       userId: resolvedUserId,
     });
 
-    const inviteLink = invite.setupLink;
-    const emailResult = invite.reusedExistingInvite
-      ? {
-          success: true,
-          error: undefined,
-          deliveryMode: 'sent' as const,
-          diagnostics: null,
-        }
-      : await sendWelcomeEmail({
-          email: normalizedEmail,
-          name: `${firstName} ${lastName}`,
-          setupLink: invite.setupLink,
-          variant: 'welcome',
-        });
-
-    if (!emailResult.success) {
-      return NextResponse.json(
-        {
-          error: emailResult.error || 'Failed to send welcome email.',
-          diagnostics: { ...(emailResult.diagnostics || {}), inviteLink: invite.setupLink },
-        },
-        { status: 500 }
-      );
-    }
-
-    const exposeInviteLink = emailResult.deliveryMode === 'manual-link';
-
     return NextResponse.json({
       ok: true,
       uid: resolvedUserId,
-      message: invite.reusedExistingInvite
-        ? 'User created. An active password setup invite already existed for this user, so no duplicate welcome email was sent.'
-        : 'User created and welcome email sent.',
+      message: 'User created. Send the password setup link manually from the user profile.',
       diagnostics: {
-        ...(emailResult.diagnostics || {}),
-        ...(exposeInviteLink ? { inviteLink } : {}),
+        deliveryMode: 'manual-dispatch',
         reusedExistingInvite: invite.reusedExistingInvite,
         inviteId: invite.inviteId,
       },
