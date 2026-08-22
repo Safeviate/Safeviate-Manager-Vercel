@@ -1,6 +1,17 @@
 export type ProjectStatus = 'Planning' | 'Active' | 'On Hold' | 'Completed' | 'Archived';
 export type ProjectHealth = 'On Track' | 'Attention' | 'At Risk';
 export type ProjectTaskStatus = 'Not Started' | 'In Progress' | 'Blocked' | 'Done';
+export type ProjectDiaryEntryType = 'Update' | 'Comment' | 'Blocker' | 'Decision' | 'Completion';
+
+export interface ProjectDiaryEntry {
+  id: string;
+  type: ProjectDiaryEntryType;
+  message: string;
+  authorId?: string;
+  authorName: string;
+  createdAt: string;
+  status?: ProjectTaskStatus;
+}
 
 export interface ProjectTask {
   id: string;
@@ -11,6 +22,7 @@ export interface ProjectTask {
   phaseId?: string;
   source?: 'Project' | 'MOC Mitigation';
   sourceId?: string;
+  diary?: ProjectDiaryEntry[];
 }
 
 export interface ProjectPhase {
