@@ -279,11 +279,16 @@ export function RoleForm({ tenantId, existingRole, trigger, mode = 'dialog' }: R
 
         <TabsContent value="permissions" className="mt-4 space-y-6">
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h4 className="text-md font-medium">Permissions</h4>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <h4 className="text-md font-medium">Permissions</h4>
+                <Badge variant="secondary" className="h-6 px-2 text-[9px] font-black uppercase tracking-[0.08em]">
+                  {selectedPermissions.filter((permissionId) => visiblePermissionIds.includes(permissionId)).length} of {allPermissionIds.length} selected
+                </Badge>
+              </div>
               {canManagePermissions ? (
-                <Button variant="link" onClick={handleSelectAllToggle} className="h-auto p-0">
-                  {areAllSelected ? 'Deselect All' : 'Select All'}
+                <Button variant="outline" size="sm" onClick={handleSelectAllToggle} className="h-8 border-slate-300 px-3 text-[10px] font-black uppercase tracking-[0.08em]">
+                  {areAllSelected ? 'Clear all permissions' : 'Select all permissions'}
                 </Button>
               ) : null}
             </div>
