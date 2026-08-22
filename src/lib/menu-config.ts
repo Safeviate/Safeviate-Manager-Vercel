@@ -22,6 +22,7 @@ import {
   Library,
   BookOpen,
   Wrench,
+  FolderKanban,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -75,6 +76,25 @@ export const menuConfig: MenuItem[] = [
         label: 'History',
         description: 'View past bookings and logs.',
         permissionId: 'bookings-view',
+      },
+    ],
+  },
+  {
+    href: '/projects',
+    label: 'Projects & Change',
+    icon: FolderKanban,
+    subItems: [
+      {
+        href: '/projects',
+        label: 'Projects',
+        description: 'Plan and deliver projects with phases, tasks and accountable people.',
+        permissionId: 'projects-view',
+      },
+      {
+        href: '/safety/management-of-change',
+        label: 'Management of Change',
+        description: 'Assess, approve and control operational changes.',
+        permissionId: 'moc-manage',
       },
     ],
   },
@@ -170,12 +190,6 @@ export const menuConfig: MenuItem[] = [
     icon: AlertTriangle,
     permissionId: 'safety-view',
     subItems: [
-      {
-        href: '/safety/management-of-change',
-        label: 'Management of Change',
-        description: 'Manage changes to procedures and policies.',
-        permissionId: 'moc-manage',
-      },
       {
         href: '/safety/risk-matrix',
         label: 'Risk Matrix',

@@ -27,6 +27,9 @@ const ROUTE_LAYOUT_REQUIREMENTS: Record<string, TenantLayoutRequirement> = {
   '/my-dashboard': {
     pageIds: ['my-dashboard'],
   },
+  '/projects': {
+    pageIds: ['projects'],
+  },
   '/safety': {
     pageIds: ['safety'],
   },

@@ -8,6 +8,7 @@ type TableName =
   | 'personnel'
   | 'tools'
   | 'safety_file_projects'
+  | 'projects'
   | 'safety_file_assignments'
   | 'tenant_configs'
   | 'alerts'
@@ -563,6 +564,23 @@ export async function ensureSimulationRouteMetricsSchema() {
     ON simulation_route_metrics (tenant_id, run_id)
   `);
   tableCache.set('simulation_route_metrics', true);
+}
+
+export async function ensureProjectsSchema() {
+  if (!(await isDatabaseAvailable())) return;
+  if (await hasTable('projects')) return;
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS projects (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS projects_tenant_idx ON projects (tenant_id, updated_at DESC)`);
+  tableCache.set('projects', true);
 }
 
 export async function ensureExamAttemptsSchema() {

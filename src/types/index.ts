@@ -59,6 +59,7 @@ export type {
   RiskLevel,
 } from './safety-report';
 export type { TableTemplate } from './table-template';
+export type { Project, ProjectStatus, ProjectHealth, ProjectTask, ProjectPhase, ProjectMilestone, ProjectRisk } from './project';
 export type {
     StudentProgressReport,
     StudentProgressEntry,

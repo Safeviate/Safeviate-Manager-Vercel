@@ -8,7 +8,7 @@ export type PermissionSection = {
 const SECTION_DEFINITIONS: Array<{ title: string; resourceIds: string[] }> = [
   { title: 'Core', resourceIds: ['dashboard', 'my-dashboard'] },
   { title: 'Bookings', resourceIds: ['bookings'] },
-  { title: 'Operations', resourceIds: ['operations', 'operations-alerts', 'operations-documents', 'operations-erp'] },
+  { title: 'Operations', resourceIds: ['operations', 'operations-alerts', 'operations-documents', 'operations-erp', 'projects'] },
   { title: 'Safety', resourceIds: ['safety', 'moc', 'risk-register', 'risk-matrix', 'safety-indicators', 'safety-reports'] },
   { title: 'Quality', resourceIds: ['quality', 'quality-checklists', 'quality-audits', 'quality-audit-schedule', 'quality-templates', 'quality-caps', 'quality-tasks', 'quality-matrix', 'quality-risk-plan'] },
   { title: 'Training', resourceIds: ['training', 'training-debriefs', 'training-exams', 'training-student-instructors', 'training-student-progression'] },

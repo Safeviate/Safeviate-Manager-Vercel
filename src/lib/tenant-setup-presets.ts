@@ -30,6 +30,13 @@ export type PageLayoutSettings = {
 
 export const SAFETY_QUALITY_LAYOUT_DEFINITIONS: PageLayoutDefinition[] = [
   {
+    id: 'projects',
+    href: '/projects',
+    label: 'Projects',
+    description: 'Project delivery workspaces linked to operational change control.',
+    sections: [{ id: 'project-workspace', label: 'Project Workspace' }],
+  },
+  {
     id: 'company-dashboard',
     href: '/dashboard',
     label: 'Company Dashboard',

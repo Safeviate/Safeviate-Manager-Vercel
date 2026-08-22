@@ -1,0 +1,25 @@
+'use client';
+
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowRight, FolderKanban, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { MainPageHeader } from '@/components/page-header';
+import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
+import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
+import type { ManagementOfChange } from '@/types/moc';
+import type { Project, ProjectStatus } from '@/types/project';
+import { NewProjectDialog } from './new-project-dialog';
+
+const statusStyle: Record<ProjectStatus, string> = { Planning: 'bg-slate-100 text-slate-700', Active: 'bg-emerald-100 text-emerald-800', 'On Hold': 'bg-amber-100 text-amber-800', Completed: 'bg-blue-100 text-blue-800', Archived: 'bg-slate-100 text-slate-500' };
+export default function ProjectsPage() {
+  const { isLoading: accessLoading, isAllowed } = useTenantRouteAccess({ href: '/projects' });
+  const [projects, setProjects] = useState<Project[]>([]); const [mocs, setMocs] = useState<ManagementOfChange[]>([]); const [status, setStatus] = useState<'Active' | 'All'>('Active');
+  const load = async () => { const response = await fetch('/api/projects', { cache: 'no-store' }); if (!response.ok) return; const payload = await response.json(); setProjects(Array.isArray(payload.projects) ? payload.projects : []); setMocs(Array.isArray(payload.mocs) ? payload.mocs : []); };
+  useEffect(() => { void load(); }, []);
+  const visible = useMemo(() => projects.filter((project) => status === 'All' ? project.status !== 'Archived' : project.status === 'Active' || project.status === 'On Hold'), [projects, status]);
+  if (!accessLoading && !isAllowed) return <TenantLayoutDisabledState />;
+  return <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-4 px-1 pt-4"><Card className="overflow-hidden border shadow-none"><MainPageHeader title="Projects" description="Deliver operational initiatives with clear ownership, milestones, linked work and Management of Change control." actions={<NewProjectDialog mocs={mocs} onCreated={(project) => setProjects((current) => [project, ...current])} />} /><CardContent className="space-y-5 bg-muted/5 p-4 md:p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex gap-2"><Button size="sm" variant={status === 'Active' ? 'default' : 'outline'} onClick={() => setStatus('Active')}>Active</Button><Button size="sm" variant={status === 'All' ? 'default' : 'outline'} onClick={() => setStatus('All')}>All projects</Button></div><p className="text-xs text-muted-foreground">Projects show delivery; MOCs remain the approval and risk-control record.</p></div>{visible.length ? <div className="grid gap-3 lg:grid-cols-2">{visible.map((project) => { const open = project.tasks.filter((task) => task.status !== 'Done').length; const overdue = project.tasks.filter((task) => task.dueDate && task.dueDate < new Date().toISOString().slice(0, 10) && task.status !== 'Done').length; const complete = project.tasks.length ? Math.round((project.tasks.filter((task) => task.status === 'Done').length / project.tasks.length) * 100) : 0; return <Card key={project.id} className="border shadow-none"><CardContent className="space-y-4 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-semibold">{project.name}</p><p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{project.objective}</p></div><Badge className={statusStyle[project.status]}>{project.status}</Badge></div>{project.mocId && <div className="flex items-center gap-2 text-xs text-emerald-700"><ShieldCheck className="h-4 w-4"/>MOC {project.mocNumber}: {project.mocTitle}</div>}<div className="grid grid-cols-3 gap-3 text-xs"><div><p className="text-muted-foreground">Progress</p><p className="font-semibold">{complete}%</p></div><div><p className="text-muted-foreground">Open work</p><p className="font-semibold">{open}</p></div><div><p className="text-muted-foreground">Target</p><p className="font-semibold">{project.targetDate || 'Not set'}</p></div></div>{overdue > 0 && <p className="flex items-center gap-2 text-xs text-amber-700"><TriangleAlert className="h-4 w-4"/>{overdue} overdue action{overdue === 1 ? '' : 's'}</p>}<Button asChild variant="outline" className="w-full"><Link href={`/projects/${project.id}`}>Open project <ArrowRight className="ml-1.5 h-4 w-4" /></Link></Button></CardContent></Card>; })}</div> : <div className="rounded-lg border border-dashed bg-background px-6 py-16 text-center"><FolderKanban className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40"/><p className="font-semibold">No active projects</p><p className="mt-1 text-sm text-muted-foreground">Create a project, or link an approved MOC to turn its controls into visible delivery work.</p></div>}</CardContent></Card></div>;
+}

@@ -21,6 +21,7 @@ export const permissionsConfig: PermissionResource[] = [
   { id: 'operations-alerts', name: 'Alerts', actions: CRUD_ACTIONS },
   { id: 'operations-documents', name: 'Company Documents', actions: CRUD_ACTIONS },
   { id: 'operations-erp', name: 'Emergency Response Plan', actions: CRUD_ACTIONS },
+  { id: 'projects', name: 'Projects', actions: [...CRUD_ACTIONS, 'archive'] },
   
   {
     id: 'bookings',

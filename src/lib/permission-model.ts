@@ -27,6 +27,11 @@ const LEGACY_TO_CANONICAL: Record<string, CanonicalPermission> = {
   'accounting-edit': { resource: 'accounting', tier: 'edit' },
   'accounting-manage': { resource: 'accounting', tier: 'manage' },
 
+  'projects-view': { resource: 'projects', tier: 'view' },
+  'projects-edit': { resource: 'projects', tier: 'edit' },
+  'projects-archive': { resource: 'projects', tier: 'archive' },
+  'projects-manage': { resource: 'projects', tier: 'manage' },
+
   'quality-audits-view': { resource: 'quality-audits', tier: 'view' },
   'quality-audits-view-all': { resource: 'quality-audits', tier: 'edit' },
   'quality-audits-edit': { resource: 'quality-audits', tier: 'edit' },
