@@ -434,8 +434,40 @@ export const menuConfig: MenuItem[] = [
       {
         href: '/admin/document-dates',
         label: 'Thresholds & Expiry',
-        description: 'Manage document expiration and inspection warnings.',
+        description: 'Configure only the threshold and expiry categories used by this tenant.',
         permissionId: 'admin-settings-edit',
+        subItems: [
+          {
+            href: '/admin/document-dates/project-task-completion',
+            label: 'Project task completion',
+            description: 'Set task due-date warning bands and colours.',
+          },
+          {
+            href: '/admin/document-dates/document-expiry',
+            label: 'Document expiry',
+            description: 'Set document expiry warnings and colours.',
+          },
+          {
+            href: '/admin/document-dates/student-milestones',
+            label: 'Student milestones',
+            description: 'Set training-hour milestone warnings.',
+          },
+          {
+            href: '/admin/document-dates/instructor-hours',
+            label: 'Instructor hours',
+            description: 'Set instructor workload warning bands.',
+          },
+          {
+            href: '/admin/document-dates/fleet-targets',
+            label: 'Fleet target hours',
+            description: 'Set fleet utilisation targets.',
+          },
+          {
+            href: '/admin/document-dates/aircraft-inspections',
+            label: 'Aircraft inspections',
+            description: 'Set 50-hour and 100-hour inspection warning bands.',
+          },
+        ],
       },
       {
         href: '/admin/mb-config',

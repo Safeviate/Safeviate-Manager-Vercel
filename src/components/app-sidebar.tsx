@@ -94,11 +94,12 @@ const renderNestedSubItems = (
     currentPathname: string,
     normalizePath: (path: string) => string,
     onSelect: (href: string) => void,
-    selectedSubHref?: string
+    selectedSubHref?: string,
+    canAccess?: (item: SubMenuItem) => boolean
 ) => (
   <SidebarMenuSub className="mx-3 mb-1 mt-1 w-auto translate-x-0 gap-0.5 border-t-0 border-sidebar-border/25 px-2 py-0.5">
     {items.map((subItem) => {
-      const nestedChildren = subItem.subItems?.filter(Boolean) || [];
+      const nestedChildren = (subItem.subItems?.filter(Boolean) || []).filter((child) => canAccess?.(child) ?? true);
       const isActive =
         normalizePath(currentPathname) === normalizePath(subItem.href) ||
         selectedSubHref === subItem.href ||
@@ -287,7 +288,8 @@ const SidebarItems = () => {
                                     setDismissedParents((dismissed) => ({ ...dismissed, [item.href]: false }));
                                     setOpenParents((current) => ({ ...current, [item.href]: true }));
                                   },
-                                  selectedSubItem?.href
+                                  selectedSubItem?.href,
+                                  (subItem) => canAccessMenuItem(subItem, item)
                                 )}
                             </SidebarCollapsibleContent>
                         </SidebarCollapsible>

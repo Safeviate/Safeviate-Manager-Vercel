@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { menuConfig } from '@/lib/menu-config';
+import { menuConfig, type SubMenuItem } from '@/lib/menu-config';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LayoutGrid } from 'lucide-react';
@@ -18,6 +18,8 @@ export function VisibilityManager() {
   const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(new Set());
 
   const toIdSuffix = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
+  const allDescendantHrefs = (items?: SubMenuItem[]): string[] =>
+    (items || []).flatMap((item) => [item.href, ...allDescendantHrefs(item.subItems)]);
 
   useEffect(() => {
     if (tenant?.enabledMenus) {
@@ -37,13 +39,13 @@ export function VisibilityManager() {
     setEnabledHrefs(newEnabled);
   };
 
-  const toggleSubMenu = (parentHref: string, href: string) => {
+  const toggleSubMenu = (parentHrefs: string[], href: string) => {
     const newEnabled = new Set(enabledHrefs);
     if (newEnabled.has(href)) {
       newEnabled.delete(href);
     } else {
       newEnabled.add(href);
-      newEnabled.add(parentHref);
+      parentHrefs.forEach((parentHref) => newEnabled.add(parentHref));
     }
     setEnabledHrefs(newEnabled);
   };
@@ -89,7 +91,7 @@ export function VisibilityManager() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {menuConfig.map((menu) => {
-            const subHrefs = menu.subItems?.map(s => s.href) || [];
+            const subHrefs = allDescendantHrefs(menu.subItems);
             const isEnabled = enabledHrefs.has(menu.href);
             
             return (
@@ -122,6 +124,7 @@ export function VisibilityManager() {
                         {menu.subItems.map((sub) => {
                           const isSubEnabled = enabledHrefs.has(sub.href);
                           return (
+                            <Fragment key={sub.href}>
                             <div key={sub.href} className="flex items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
                               <div className="min-w-0">
                                 <Label htmlFor={`submod-${toIdSuffix(sub.href)}`} className="cursor-pointer text-[11px] font-bold uppercase text-foreground">
@@ -131,10 +134,28 @@ export function VisibilityManager() {
                               <Checkbox 
                                 id={`submod-${toIdSuffix(sub.href)}`} 
                                 checked={isSubEnabled}
-                                onCheckedChange={() => toggleSubMenu(menu.href, sub.href)}
+                                onCheckedChange={() => toggleSubMenu([menu.href], sub.href)}
                                 className="h-4 w-4 shrink-0"
                               />
                             </div>
+                            {sub.subItems?.length ? (
+                              <div className="ml-3 space-y-2 border-l border-border/60 pl-3 pt-1">
+                                {sub.subItems.map((child) => (
+                                  <div key={child.href} className="flex items-center justify-between gap-3 rounded-md bg-muted/20 px-3 py-2">
+                                    <Label htmlFor={`submod-${toIdSuffix(child.href)}`} className="cursor-pointer text-[10px] font-semibold text-foreground">
+                                      {child.label}
+                                    </Label>
+                                    <Checkbox
+                                      id={`submod-${toIdSuffix(child.href)}`}
+                                      checked={enabledHrefs.has(child.href)}
+                                      onCheckedChange={() => toggleSubMenu([menu.href, sub.href], child.href)}
+                                      className="h-4 w-4 shrink-0"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
+                            </Fragment>
                           );
                         })}
                       </div>

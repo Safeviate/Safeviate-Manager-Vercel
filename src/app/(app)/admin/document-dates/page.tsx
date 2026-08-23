@@ -17,6 +17,18 @@ import { usePermissions } from '@/hooks/use-permissions';
 import type { InstructorHourWarning, InstructorHourWarningSettings, StudentMilestoneSettings } from '@/types/training';
 import type { AircraftInspectionWarningSettings, HourWarning } from '@/types/inspection';
 
+export type ThresholdSection = 'all' | 'project-task-completion' | 'document-expiry' | 'student-milestones' | 'instructor-hours' | 'fleet-targets' | 'aircraft-inspections';
+
+const thresholdSectionTitles: Record<ThresholdSection, string> = {
+  all: 'Thresholds & Expiry',
+  'project-task-completion': 'Project task completion',
+  'document-expiry': 'Document expiry',
+  'student-milestones': 'Student milestones',
+  'instructor-hours': 'Instructor hours',
+  'fleet-targets': 'Fleet target hours',
+  'aircraft-inspections': 'Aircraft inspections',
+};
+
 export type WarningPeriod = {
   period: number;
   color: string;
@@ -64,7 +76,7 @@ const defaultHundredHourWarnings: HourWarning[] = [
 
 const defaultFleetTargetHours = 20;
 
-export default function DocumentDatesPage() {
+export default function DocumentDatesPage({ initialSection = 'all' }: { initialSection?: ThresholdSection }) {
   const { toast } = useToast();
   const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
   const canManage = hasPermission('admin-settings-edit');
@@ -509,16 +521,17 @@ export default function DocumentDatesPage() {
       </div>
     );
   }
+  const show = (...sections: ThresholdSection[]) => initialSection === 'all' || sections.includes(initialSection);
   
   return (
     <div className="flex flex-col h-full overflow-hidden gap-4 px-1">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <MainPageHeader title="Threshold & Expiry" />
+        <MainPageHeader title={thresholdSectionTitles[initialSection]} />
 
         <CardContent className="flex-1 p-0 overflow-hidden">
           <ScrollArea className="h-full">
             <div className="p-6 space-y-10 pb-24">
-              <div className="space-y-5 rounded-xl border bg-muted/5 p-5 shadow-inner">
+              {show('project-task-completion') && <div className="space-y-5 rounded-xl border bg-muted/5 p-5 shadow-inner">
                 <div><h2 className="font-black text-[10px] uppercase tracking-widest text-primary">Project Task Completion Colours</h2><p className="mt-1 text-xs text-muted-foreground">Set warning bands used by project and dashboard views to flag approaching completion dates.</p></div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="flex items-center justify-between rounded-xl border bg-background p-3"><span className="text-[10px] font-black uppercase tracking-widest">On track</span><Input type="color" value={projectCompletion.defaultColor} onChange={(e) => void saveProjectCompletion({ ...projectCompletion, defaultColor: e.target.value })} className="h-9 w-14 p-1" /></div>
@@ -526,13 +539,13 @@ export default function DocumentDatesPage() {
                 </div>
                 <div className="space-y-2"><h4 className="text-[9px] font-black uppercase tracking-widest">Warning bands</h4>{projectCompletion.warningPeriods.map((warning) => <div key={warning.period} className="flex items-center justify-between rounded-xl border bg-background p-3"><div className="flex items-center gap-3"><span className="rounded-full px-3 py-1 text-[10px] font-black uppercase" style={{ backgroundColor: warning.color }}>Due soon</span><Input type="number" min="1" value={warning.period} onChange={(e) => { const period = Number(e.target.value); if (period > 0) void saveProjectCompletion({ ...projectCompletion, warningPeriods: projectCompletion.warningPeriods.map((item) => item.period === warning.period ? { ...item, period } : item) }); }} className="h-8 w-20" /><span className="text-[10px] font-black uppercase">days or less</span></div><div className="flex items-center gap-2"><Input type="color" value={warning.color} onChange={(e) => void saveProjectCompletion({ ...projectCompletion, warningPeriods: projectCompletion.warningPeriods.map((item) => item.period === warning.period ? { ...item, color: e.target.value } : item) })} className="h-8 w-12 p-1" /><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeProjectWarning(warning.period)}><Trash2 className="h-4 w-4" /></Button></div></div>)}</div>
                 <div className="flex gap-2 rounded-xl border bg-background p-3"><Input type="number" min="1" value={newProjectPeriod} onChange={(e) => setNewProjectPeriod(e.target.value)} placeholder="Days" className="h-9 w-28" /><Input type="color" value={newProjectColor} onChange={(e) => setNewProjectColor(e.target.value)} className="h-9 w-12 p-1" /><Button type="button" size="sm" onClick={addProjectWarning}>Add warning band</Button></div>
-              </div>
+              </div>}
               
               {/* --- Section 1: Documents & Milestones --- */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {show('document-expiry', 'student-milestones') && <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 
                 {/* Document Expiry Warnings */}
-                <div className="space-y-6">
+                {show('document-expiry') && <div className="space-y-6">
                   <div className="flex items-center gap-2">
                     <ShieldAlert className="h-4 w-4 text-primary" />
                     <h2 className="font-black text-[10px] uppercase tracking-widest text-primary">Document Expiry Warnings</h2>
@@ -592,10 +605,10 @@ export default function DocumentDatesPage() {
                       )}
                     </div>
                   </div>
-                </div>
+                </div>}
 
                 {/* Student Hour Milestones */}
-                <div className="space-y-6">
+                {show('student-milestones') && <div className="space-y-6">
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-primary" />
                     <h2 className="font-black text-[10px] uppercase tracking-widest text-primary">Student Hour Milestones</h2>
@@ -629,13 +642,13 @@ export default function DocumentDatesPage() {
                       Warning hours determine when the milestone progress bar changes color in the student profile view to indicate a target is approaching.
                     </p>
                   </div>
-                </div>
-              </div>
+                </div>}
+              </div>}
 
-              <Separator />
+              {show('document-expiry', 'student-milestones') && <Separator />}
 
               {/* --- Section 1b: Instructor Hour Warnings --- */}
-              <div className="space-y-6">
+              {show('instructor-hours') && <div className="space-y-6">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-primary" />
                   <h2 className="font-black text-[10px] uppercase tracking-widest text-primary">Instructor Hour Warnings</h2>
@@ -699,12 +712,12 @@ export default function DocumentDatesPage() {
                     )}
                   </div>
                 </div>
-              </div>
+              </div>}
 
-              <Separator />
+              {show('instructor-hours') && <Separator />}
 
               {/* --- Section 1c: Fleet Target Hours --- */}
-              <div className="space-y-6">
+              {show('fleet-targets') && <div className="space-y-6">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-primary" />
                   <h2 className="font-black text-[10px] uppercase tracking-widest text-primary">Fleet Target Hours</h2>
@@ -725,12 +738,12 @@ export default function DocumentDatesPage() {
                     />
                   </div>
                 </div>
-              </div>
+              </div>}
 
-              <Separator />
+              {show('fleet-targets') && <Separator />}
 
               {/* --- Section 2: Aircraft Inspection Warnings --- */}
-              <div className="space-y-6">
+              {show('aircraft-inspections') && <div className="space-y-6">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-primary" />
                   <h2 className="font-black text-[10px] uppercase tracking-widest text-primary">Aircraft Inspection Warnings</h2>
@@ -827,7 +840,7 @@ export default function DocumentDatesPage() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </div>}
 
             </div>
           </ScrollArea>
