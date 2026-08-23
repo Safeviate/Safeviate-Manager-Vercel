@@ -8,6 +8,7 @@ export type RecoveryEntityType =
   | 'aircraft'
   | 'audit-checklist'
   | 'audit-schedule-area'
+  | 'checklist-schedule-area'
   | 'audit-schedule-item';
 
 type RecoveryExecutor = Pick<typeof prisma, '$executeRawUnsafe'>;

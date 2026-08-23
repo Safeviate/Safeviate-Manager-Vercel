@@ -11,6 +11,57 @@ import { NextResponse } from 'next/server';
 import type { AuditScheduleItem, AuditScheduleStatus } from '@/types/quality';
 
 const AUDIT_SCHEDULE_SCOPE = 'audit-schedule';
+const CHECKLIST_SCHEDULE_SCOPE = 'checklist-schedule';
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+type ScheduleScope = 'audits' | 'checklists';
+
+type ScheduleStorage = {
+  activityScope: string;
+  label: string;
+  areaEntityType: string;
+  recoveryEntityType: RecoveryEntityType;
+  areas: string;
+  items: string;
+  archivedAreas: string;
+  archivedItems: string;
+  revision: string;
+  requests: string;
+};
+
+function getScheduleStorage(scope: ScheduleScope): ScheduleStorage {
+  if (scope === 'checklists') {
+    return {
+      activityScope: CHECKLIST_SCHEDULE_SCOPE,
+      label: 'checklist',
+      areaEntityType: 'checklist-schedule-area',
+      recoveryEntityType: 'checklist-schedule-area',
+      areas: 'checklist-schedule-areas',
+      items: 'checklist-schedule-items',
+      archivedAreas: 'archived-checklist-schedule-areas',
+      archivedItems: 'archived-checklist-schedule-items',
+      revision: 'checklist-schedule-revision',
+      requests: 'checklist-schedule-change-requests',
+    };
+  }
+  return {
+    activityScope: AUDIT_SCHEDULE_SCOPE,
+    label: 'audit',
+    areaEntityType: 'audit-area',
+    recoveryEntityType: 'audit-schedule-area',
+    areas: 'audit-areas',
+    items: 'audit-schedule-items',
+    archivedAreas: 'archived-audit-areas',
+    archivedItems: 'archived-audit-schedule-items',
+    revision: 'audit-schedule-revision',
+    requests: 'audit-schedule-change-requests',
+  };
+}
+
+function getScheduleScope(request: Request, body?: Record<string, unknown>): ScheduleScope {
+  const requested = body?.scope ?? new URL(request.url).searchParams.get('scope');
+  return requested === 'checklists' ? 'checklists' : 'audits';
+}
 
 type SessionContext = {
   tenantId: string | null;
@@ -39,7 +90,7 @@ type ScheduleChangeRequest = {
 };
 type DatabaseExecutor = Pick<typeof prisma, '$queryRawUnsafe' | '$executeRawUnsafe'>;
 
-async function getSessionContext(request: Request): Promise<SessionContext> {
+async function getSessionContext(request: Request, scope: ScheduleScope): Promise<SessionContext> {
   const session = await getServerSession(authOptions);
   const actorEmail = session?.user?.email?.trim().toLowerCase() || null;
   const actorUserId = session?.user?.id?.trim() || null;
@@ -70,15 +121,16 @@ async function getSessionContext(request: Request): Promise<SessionContext> {
   normalizePermissionIds(overrides.filter((value) => !value.startsWith('!'))).forEach((value) => granted.add(value));
   const has = (permission: string) => granted.has('*') || hasHierarchicalPermission(granted, permission, deniedPermissions);
 
+  const resource = scope === 'checklists' ? 'quality-checklists' : 'quality-audit-schedule';
   return {
     tenantId,
     actorUserId,
     actorEmail,
-    canCreate: has('quality-audit-schedule-create'),
-    canEdit: has('quality-audit-schedule-edit'),
+    canCreate: has(`${resource}-create`),
+    canEdit: has(`${resource}-edit`),
     // Legacy delete permission remains a compatibility grant; schedule operations never hard-delete data.
-    canArchive: has('quality-audit-schedule-archive') || has('quality-audit-schedule-delete'),
-    canApprove: has('quality-audit-schedule-approve'),
+    canArchive: has(`${resource}-archive`) || has(`${resource}-delete`),
+    canApprove: scope === 'audits' && has('quality-audit-schedule-approve'),
   };
 }
 
@@ -94,21 +146,28 @@ function toAreas(value: unknown) {
   return Array.isArray(value) ? value.filter((area): area is string => typeof area === 'string').map((area) => area.trim()).filter(Boolean) : [];
 }
 
+function isValidIsoDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
 function toItems(value: unknown) {
   return Array.isArray(value)
-    ? value.filter((item): item is AuditScheduleItem => Boolean(item) && typeof item === 'object').map((item) => ({
+    ? value.filter((item): item is AuditScheduleItem => Boolean(item) && typeof item === 'object').map((item): AuditScheduleItem => ({
         ...item,
         id: typeof item.id === 'string' && item.id.trim() ? item.id.trim() : crypto.randomUUID(),
         area: typeof item.area === 'string' ? item.area.trim() : '',
         month: typeof item.month === 'string' ? item.month.trim() : '',
         year: Number.isFinite(Number(item.year)) ? Number(item.year) : new Date().getFullYear(),
         status: ['Scheduled', 'Completed', 'Pending', 'Not Scheduled'].includes(item.status) ? item.status : 'Not Scheduled',
+        plannedDate: isValidIsoDate(item.plannedDate) ? item.plannedDate : undefined,
       })).filter((item) => item.area && item.month)
     : [];
 }
 
-function getRevision(config: Record<string, unknown>) {
-  const revision = Number(config['audit-schedule-revision']);
+function getRevision(config: Record<string, unknown>, storage: ScheduleStorage) {
+  const revision = Number(config[storage.revision]);
   return Number.isSafeInteger(revision) && revision > 0 ? revision : 1;
 }
 
@@ -151,90 +210,98 @@ function changeRequestPayload(action: ScheduleAction, body: Record<string, unkno
     month: typeof body.month === 'string' ? body.month : undefined,
     year: Number.isFinite(Number(body.year)) ? Number(body.year) : undefined,
     status: typeof body.status === 'string' ? body.status : undefined,
+    plannedDate: typeof body.plannedDate === 'string' ? body.plannedDate : undefined,
     reason: cleanReason(body.reason),
   };
 }
 
-function assertActionPermission(context: SessionContext, action: ScheduleAction) {
-  if (action === 'add-area' && !context.canCreate) throw new Error('You do not have permission to create audit schedule entries.');
-  if (action === 'rename-area' && !context.canEdit) throw new Error('You do not have permission to edit audit schedule entries.');
-  if ((action === 'archive-area' || action === 'restore-area') && !context.canArchive) throw new Error('You do not have permission to archive or restore audit schedule entries.');
-  if (action === 'set-status' && !context.canCreate && !context.canEdit) throw new Error('You do not have permission to change audit schedule entries.');
+function assertActionPermission(context: SessionContext, action: ScheduleAction, storage: ScheduleStorage) {
+  if (action === 'add-area' && !context.canCreate) throw new Error(`You do not have permission to create ${storage.label} schedule entries.`);
+  if (action === 'rename-area' && !context.canEdit) throw new Error(`You do not have permission to edit ${storage.label} schedule entries.`);
+  if ((action === 'archive-area' || action === 'restore-area') && !context.canArchive) throw new Error(`You do not have permission to archive or restore ${storage.label} schedule entries.`);
+  if (action === 'set-status' && !context.canCreate && !context.canEdit) throw new Error(`You do not have permission to change ${storage.label} schedule entries.`);
 }
 
-function buildNextConfig(config: Record<string, unknown>, action: ScheduleAction, body: Record<string, unknown>) {
-  const areas = toAreas(config['audit-areas']);
-  const items = toItems(config['audit-schedule-items']);
-  const archivedAreas = toAreas(config['archived-audit-areas']);
-  const archivedItems = toItems(config['archived-audit-schedule-items']);
+function buildNextConfig(config: Record<string, unknown>, action: ScheduleAction, body: Record<string, unknown>, storage: ScheduleStorage) {
+  const areas = toAreas(config[storage.areas]);
+  const items = toItems(config[storage.items]);
+  const archivedAreas = toAreas(config[storage.archivedAreas]);
+  const archivedItems = toItems(config[storage.archivedItems]);
   const reason = cleanReason(body.reason);
   let activity: { action: ActivityLogAction; entityType: string; entityId: string; entityLabel: string; details: Record<string, unknown> };
   let recovery: { entityType: RecoveryEntityType; entityId: string; entityLabel: string; snapshot: Record<string, unknown> } | null = null;
   let restore: { entityType: RecoveryEntityType; entityId: string } | null = null;
 
   if (action === 'add-area') {
-    const area = requiredString(body.area, 'Audit area');
-    if (areas.includes(area)) throw new Error('An audit area with this name already exists.');
+    const area = requiredString(body.area, `${storage.label[0].toUpperCase()}${storage.label.slice(1)} area`);
+    if (areas.includes(area)) throw new Error(`A ${storage.label} area with this name already exists.`);
     areas.push(area);
-    activity = { action: 'created', entityType: 'audit-area', entityId: area, entityLabel: `Audit area "${area}"`, details: { area, reason } };
+    activity = { action: 'created', entityType: storage.areaEntityType, entityId: area, entityLabel: `${storage.label[0].toUpperCase()}${storage.label.slice(1)} area "${area}"`, details: { area, reason } };
   } else if (action === 'rename-area') {
-    const area = requiredString(body.area, 'Current audit area');
-    const newArea = requiredString(body.newArea, 'New audit area');
-    if (!reason) throw new Error('A reason is required when renaming an audit area.');
-    if (!areas.includes(area)) throw new Error('The audit area no longer exists. Reload and try again.');
-    if (area !== newArea && areas.includes(newArea)) throw new Error('An audit area with this name already exists.');
+    const area = requiredString(body.area, `Current ${storage.label} area`);
+    const newArea = requiredString(body.newArea, `New ${storage.label} area`);
+    if (!reason) throw new Error(`A reason is required when renaming a ${storage.label} area.`);
+    if (!areas.includes(area)) throw new Error(`The ${storage.label} area no longer exists. Reload and try again.`);
+    if (area !== newArea && areas.includes(newArea)) throw new Error(`A ${storage.label} area with this name already exists.`);
     const areaIndex = areas.indexOf(area);
     areas[areaIndex] = newArea;
     items.forEach((item) => { if (item.area === area) item.area = newArea; });
-    activity = { action: 'updated', entityType: 'audit-area', entityId: area, entityLabel: `Audit area "${newArea}"`, details: { before: { area }, after: { area: newArea }, reason } };
+    activity = { action: 'updated', entityType: storage.areaEntityType, entityId: area, entityLabel: `${storage.label[0].toUpperCase()}${storage.label.slice(1)} area "${newArea}"`, details: { before: { area }, after: { area: newArea }, reason } };
   } else if (action === 'set-status') {
-    const area = requiredString(body.area, 'Audit area');
+    const area = requiredString(body.area, `${storage.label[0].toUpperCase()}${storage.label.slice(1)} area`);
     const month = requiredString(body.month, 'Month');
     const year = Number(body.year);
     const status = body.status as AuditScheduleStatus;
-    if (!areas.includes(area)) throw new Error('The audit area no longer exists. Reload and try again.');
+    const plannedDate = isValidIsoDate(body.plannedDate) ? body.plannedDate : undefined;
+    if (!areas.includes(area)) throw new Error(`The ${storage.label} area no longer exists. Reload and try again.`);
     if (!Number.isSafeInteger(year) || !['Scheduled', 'Completed', 'Pending', 'Not Scheduled'].includes(status)) throw new Error('Invalid schedule status.');
+    const monthIndex = MONTHS.indexOf(month);
+    if (monthIndex < 0) throw new Error('Invalid schedule month.');
+    const expectedMonth = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+    if (plannedDate && !plannedDate.startsWith(`${expectedMonth}-`)) throw new Error('The planned date must fall within the selected schedule month.');
     const existing = items.find((item) => item.area === area && item.month === month && item.year === year);
     if (existing) {
-      const before = { status: existing.status };
+      const before = { status: existing.status, plannedDate: existing.plannedDate };
       existing.status = status;
-      activity = { action: 'updated', entityType: 'schedule-item', entityId: existing.id, entityLabel: itemLabel(existing), details: { before, after: { status }, reason } };
+      existing.plannedDate = status === 'Not Scheduled' ? undefined : plannedDate;
+      activity = { action: 'updated', entityType: 'schedule-item', entityId: existing.id, entityLabel: itemLabel(existing), details: { before, after: { status, plannedDate: existing.plannedDate }, reason } };
     } else {
-      const item: AuditScheduleItem = { id: crypto.randomUUID(), area, month, year, status };
+      const item: AuditScheduleItem = { id: crypto.randomUUID(), area, month, year, status, plannedDate: status === 'Not Scheduled' ? undefined : plannedDate };
       items.push(item);
-      activity = { action: 'created', entityType: 'schedule-item', entityId: item.id, entityLabel: itemLabel(item), details: { area, month, year, status, reason } };
+      activity = { action: 'created', entityType: 'schedule-item', entityId: item.id, entityLabel: itemLabel(item), details: { area, month, year, status, plannedDate: item.plannedDate, reason } };
     }
   } else if (action === 'archive-area') {
-    const area = requiredString(body.area, 'Audit area');
-    if (!reason) throw new Error('A reason is required when archiving an audit area.');
-    if (!areas.includes(area)) throw new Error('The audit area no longer exists. Reload and try again.');
+    const area = requiredString(body.area, `${storage.label[0].toUpperCase()}${storage.label.slice(1)} area`);
+    if (!reason) throw new Error(`A reason is required when archiving a ${storage.label} area.`);
+    if (!areas.includes(area)) throw new Error(`The ${storage.label} area no longer exists. Reload and try again.`);
     const archivedAreaItems = items.filter((item) => item.area === area);
     areas.splice(areas.indexOf(area), 1);
     const activeItems = items.filter((item) => item.area !== area);
     archivedAreas.push(area);
     archivedItems.push(...archivedAreaItems);
-    activity = { action: 'archived', entityType: 'audit-area', entityId: area, entityLabel: `Audit area "${area}"`, details: { area, itemCount: archivedAreaItems.length, reason } };
-    recovery = { entityType: 'audit-schedule-area', entityId: area, entityLabel: `Audit area "${area}"`, snapshot: { area, items: archivedAreaItems } };
-    return { next: { ...config, 'audit-areas': areas, 'audit-schedule-items': activeItems, 'archived-audit-areas': Array.from(new Set(archivedAreas)), 'archived-audit-schedule-items': archivedItems }, activity, recovery, restore };
+    activity = { action: 'archived', entityType: storage.areaEntityType, entityId: area, entityLabel: `${storage.label[0].toUpperCase()}${storage.label.slice(1)} area "${area}"`, details: { area, itemCount: archivedAreaItems.length, reason } };
+    recovery = { entityType: storage.recoveryEntityType, entityId: area, entityLabel: `${storage.label[0].toUpperCase()}${storage.label.slice(1)} area "${area}"`, snapshot: { area, items: archivedAreaItems } };
+    return { next: { ...config, [storage.areas]: areas, [storage.items]: activeItems, [storage.archivedAreas]: Array.from(new Set(archivedAreas)), [storage.archivedItems]: archivedItems }, activity, recovery, restore };
   } else {
-    const area = requiredString(body.area, 'Audit area');
-    if (!reason) throw new Error('A reason is required when restoring an audit area.');
-    if (!archivedAreas.includes(area)) throw new Error('The archived audit area no longer exists. Reload and try again.');
+    const area = requiredString(body.area, `${storage.label[0].toUpperCase()}${storage.label.slice(1)} area`);
+    if (!reason) throw new Error(`A reason is required when restoring a ${storage.label} area.`);
+    if (!archivedAreas.includes(area)) throw new Error(`The archived ${storage.label} area no longer exists. Reload and try again.`);
     const restoredItems = archivedItems.filter((item) => item.area === area);
     areas.push(area);
     items.push(...restoredItems.filter((candidate) => !items.some((item) => item.id === candidate.id)));
-    activity = { action: 'restored', entityType: 'audit-area', entityId: area, entityLabel: `Audit area "${area}"`, details: { area, itemCount: restoredItems.length, reason } };
-    restore = { entityType: 'audit-schedule-area', entityId: area };
-    return { next: { ...config, 'audit-areas': Array.from(new Set(areas)), 'audit-schedule-items': items, 'archived-audit-areas': archivedAreas.filter((candidate) => candidate !== area), 'archived-audit-schedule-items': archivedItems.filter((item) => item.area !== area) }, activity, recovery, restore };
+    activity = { action: 'restored', entityType: storage.areaEntityType, entityId: area, entityLabel: `${storage.label[0].toUpperCase()}${storage.label.slice(1)} area "${area}"`, details: { area, itemCount: restoredItems.length, reason } };
+    restore = { entityType: storage.recoveryEntityType, entityId: area };
+    return { next: { ...config, [storage.areas]: Array.from(new Set(areas)), [storage.items]: items, [storage.archivedAreas]: archivedAreas.filter((candidate) => candidate !== area), [storage.archivedItems]: archivedItems.filter((item) => item.area !== area) }, activity, recovery, restore };
   }
 
-  return { next: { ...config, 'audit-areas': areas, 'audit-schedule-items': items, 'archived-audit-areas': Array.from(new Set(archivedAreas)), 'archived-audit-schedule-items': archivedItems }, activity, recovery, restore };
+  return { next: { ...config, [storage.areas]: areas, [storage.items]: items, [storage.archivedAreas]: Array.from(new Set(archivedAreas)), [storage.archivedItems]: archivedItems }, activity, recovery, restore };
 }
 
-async function persistScheduleChange(context: SessionContext, body: Record<string, unknown>) {
+async function persistScheduleChange(context: SessionContext, body: Record<string, unknown>, scope: ScheduleScope) {
+  const storage = getScheduleStorage(scope);
   const action = getAction(body.action);
   if (!action || !context.tenantId || !context.actorEmail) throw new Error('Invalid schedule action.');
-  assertActionPermission(context, action);
+  assertActionPermission(context, action, storage);
   const expectedRevision = Number(body.revision);
   if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1) throw new Error('This schedule version is invalid. Reload and try again.');
 
@@ -243,19 +310,21 @@ async function persistScheduleChange(context: SessionContext, body: Record<strin
   await ensureActivityLogsSchema();
   return prisma.$transaction(async (tx) => {
     const config = await getConfig(tenantId, tx, true);
-    const revision = getRevision(config);
+    const revision = getRevision(config, storage);
     if (revision !== expectedRevision) {
-      const error = new Error('The audit schedule was changed by another user. Reload before making your change.');
+      const error = new Error(`The ${storage.label} schedule was changed by another user. Reload before making your change.`);
       (error as Error & { code?: string }).code = 'STALE_SCHEDULE';
       throw error;
     }
     if (action === 'set-status') {
-      const preview = buildNextConfig(config, action, body);
-      if (preview.activity.action === 'created' && !context.canCreate) throw new Error('You do not have permission to create audit schedule entries.');
-      if (preview.activity.action === 'updated' && !context.canEdit) throw new Error('You do not have permission to edit audit schedule entries.');
+      const preview = buildNextConfig(config, action, body, storage);
+      if (preview.activity.action === 'created' && !context.canCreate) throw new Error(`You do not have permission to create ${storage.label} schedule entries.`);
+      if (preview.activity.action === 'updated' && !context.canEdit) throw new Error(`You do not have permission to edit ${storage.label} schedule entries.`);
     }
 
-    if (!context.canApprove) {
+    // Checklist scheduling uses the existing Checklist create/edit/archive permissions
+    // and applies directly. Audit changes retain their approval workflow.
+    if (scope === 'audits' && !context.canApprove) {
       const request: ScheduleChangeRequest = {
         id: crypto.randomUUID(),
         action,
@@ -265,8 +334,8 @@ async function persistScheduleChange(context: SessionContext, body: Record<strin
         requestedAt: new Date().toISOString(),
         status: 'pending',
       };
-      const requests = toChangeRequests(config['audit-schedule-change-requests']);
-      const next: Record<string, unknown> = { ...config, 'audit-schedule-change-requests': [...requests, request] };
+      const requests = toChangeRequests(config[storage.requests]);
+      const next: Record<string, unknown> = { ...config, [storage.requests]: [...requests, request] };
       await tx.$executeRawUnsafe(
         `INSERT INTO tenant_configs (tenant_id, data, created_at, updated_at) VALUES ($1, $2::jsonb, NOW(), NOW()) ON CONFLICT (tenant_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
         tenantId,
@@ -274,7 +343,7 @@ async function persistScheduleChange(context: SessionContext, body: Record<strin
       );
       await recordActivityLog({
         tenantId,
-        scope: AUDIT_SCHEDULE_SCOPE,
+        scope: storage.activityScope,
         action: 'submitted',
         entityType: 'schedule-change-request',
         entityId: request.id,
@@ -283,11 +352,11 @@ async function persistScheduleChange(context: SessionContext, body: Record<strin
         actorEmail,
         details: { action, ...request.payload },
       }, tx);
-      return { areas: toAreas(next['audit-areas']), items: toItems(next['audit-schedule-items']), archivedAreas: toAreas(next['archived-audit-areas']), archivedItems: toItems(next['archived-audit-schedule-items']), revision, pending: true, requestId: request.id };
+      return { areas: toAreas(next[storage.areas]), items: toItems(next[storage.items]), archivedAreas: toAreas(next[storage.archivedAreas]), archivedItems: toItems(next[storage.archivedItems]), revision, pending: true, requestId: request.id };
     }
-    const result = buildNextConfig(config, action, body);
+    const result = buildNextConfig(config, action, body, storage);
     const nextRevision = revision + 1;
-    const next = { ...result.next, 'audit-schedule-revision': nextRevision };
+    const next = { ...result.next, [storage.revision]: nextRevision };
     if (result.recovery) {
       await recordRecoveryArchive({ tenantId, ...result.recovery, actorUserId: context.actorUserId, actorEmail }, tx);
     }
@@ -299,12 +368,13 @@ async function persistScheduleChange(context: SessionContext, body: Record<strin
     if (result.restore) {
       await markRecoveryArchivesRestoredForEntity({ tenantId, ...result.restore }, { userId: context.actorUserId, email: actorEmail }, tx);
     }
-    await recordActivityLog({ tenantId, scope: AUDIT_SCHEDULE_SCOPE, actorUserId: context.actorUserId, actorEmail, ...result.activity }, tx);
-    return { areas: toAreas(next['audit-areas']), items: toItems(next['audit-schedule-items']), archivedAreas: toAreas(next['archived-audit-areas']), archivedItems: toItems(next['archived-audit-schedule-items']), revision: nextRevision, pending: false };
+    await recordActivityLog({ tenantId, scope: storage.activityScope, actorUserId: context.actorUserId, actorEmail, ...result.activity }, tx);
+    return { areas: toAreas(next[storage.areas]), items: toItems(next[storage.items]), archivedAreas: toAreas(next[storage.archivedAreas]), archivedItems: toItems(next[storage.archivedItems]), revision: nextRevision, pending: false };
   });
 }
 
-async function decideScheduleChange(context: SessionContext, body: Record<string, unknown>) {
+async function decideScheduleChange(context: SessionContext, body: Record<string, unknown>, scope: ScheduleScope) {
+  const storage = getScheduleStorage(scope);
   const decision = getDecision(body.action);
   const requestId = requiredString(body.requestId, 'Change request');
   if (!decision || !context.tenantId || !context.actorEmail || !context.canApprove) throw new Error('You do not have permission to approve schedule changes.');
@@ -315,7 +385,7 @@ async function decideScheduleChange(context: SessionContext, body: Record<string
   await ensureActivityLogsSchema();
   return prisma.$transaction(async (tx) => {
     const config = await getConfig(tenantId, tx, true);
-    const requests = toChangeRequests(config['audit-schedule-change-requests']);
+    const requests = toChangeRequests(config[storage.requests]);
     const requestIndex = requests.findIndex((request) => request.id === requestId && request.status === 'pending');
     if (requestIndex < 0) throw new Error('This change request is no longer pending. Reload and try again.');
     const request = requests[requestIndex];
@@ -330,37 +400,39 @@ async function decideScheduleChange(context: SessionContext, body: Record<string
     requests[requestIndex] = decidedRequest;
 
     if (decision === 'reject-change') {
-      const next = { ...config, 'audit-schedule-change-requests': requests };
+      const next = { ...config, [storage.requests]: requests };
       await tx.$executeRawUnsafe(`INSERT INTO tenant_configs (tenant_id, data, created_at, updated_at) VALUES ($1, $2::jsonb, NOW(), NOW()) ON CONFLICT (tenant_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`, tenantId, JSON.stringify(next));
-      await recordActivityLog({ tenantId, scope: AUDIT_SCHEDULE_SCOPE, action: 'rejected', entityType: 'schedule-change-request', entityId: request.id, entityLabel: `${request.action.replace(/-/g, ' ')} request`, actorUserId: context.actorUserId, actorEmail, details: { requestedBy: request.requestedByEmail, reason: decisionReason } }, tx);
-      return { revision: getRevision(next), pending: false };
+      await recordActivityLog({ tenantId, scope: storage.activityScope, action: 'rejected', entityType: 'schedule-change-request', entityId: request.id, entityLabel: `${request.action.replace(/-/g, ' ')} request`, actorUserId: context.actorUserId, actorEmail, details: { requestedBy: request.requestedByEmail, reason: decisionReason } }, tx);
+      return { revision: getRevision(next, storage), pending: false };
     }
 
-    const result = buildNextConfig(config, request.action, request.payload);
-    const nextRevision = getRevision(config) + 1;
-    const next = { ...result.next, 'audit-schedule-revision': nextRevision, 'audit-schedule-change-requests': requests };
+    const result = buildNextConfig(config, request.action, request.payload, storage);
+    const nextRevision = getRevision(config, storage) + 1;
+    const next = { ...result.next, [storage.revision]: nextRevision, [storage.requests]: requests };
     if (result.recovery) await recordRecoveryArchive({ tenantId, ...result.recovery, actorUserId: context.actorUserId, actorEmail }, tx);
     await tx.$executeRawUnsafe(`INSERT INTO tenant_configs (tenant_id, data, created_at, updated_at) VALUES ($1, $2::jsonb, NOW(), NOW()) ON CONFLICT (tenant_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`, tenantId, JSON.stringify(next));
     if (result.restore) await markRecoveryArchivesRestoredForEntity({ tenantId, ...result.restore }, { userId: context.actorUserId, email: actorEmail }, tx);
-    await recordActivityLog({ tenantId, scope: AUDIT_SCHEDULE_SCOPE, action: 'approved', entityType: 'schedule-change-request', entityId: request.id, entityLabel: `${request.action.replace(/-/g, ' ')} request`, actorUserId: context.actorUserId, actorEmail, details: { requestedBy: request.requestedByEmail, reason: decisionReason } }, tx);
-    await recordActivityLog({ tenantId, scope: AUDIT_SCHEDULE_SCOPE, actorUserId: context.actorUserId, actorEmail, ...result.activity }, tx);
-    return { areas: toAreas(next['audit-areas']), items: toItems(next['audit-schedule-items']), archivedAreas: toAreas(next['archived-audit-areas']), archivedItems: toItems(next['archived-audit-schedule-items']), revision: nextRevision, pending: false };
+    await recordActivityLog({ tenantId, scope: storage.activityScope, action: 'approved', entityType: 'schedule-change-request', entityId: request.id, entityLabel: `${request.action.replace(/-/g, ' ')} request`, actorUserId: context.actorUserId, actorEmail, details: { requestedBy: request.requestedByEmail, reason: decisionReason } }, tx);
+    await recordActivityLog({ tenantId, scope: storage.activityScope, actorUserId: context.actorUserId, actorEmail, ...result.activity }, tx);
+    return { areas: toAreas(next[storage.areas]), items: toItems(next[storage.items]), archivedAreas: toAreas(next[storage.archivedAreas]), archivedItems: toItems(next[storage.archivedItems]), revision: nextRevision, pending: false };
   });
 }
 
 export async function GET(request: Request) {
   try {
-    const context = await getSessionContext(request);
+    const scope = getScheduleScope(request);
+    const storage = getScheduleStorage(scope);
+    const context = await getSessionContext(request, scope);
     const { tenantId } = context;
     if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const config = await getConfig(tenantId);
-    const requests = toChangeRequests(config['audit-schedule-change-requests']);
+    const requests = toChangeRequests(config[storage.requests]);
     return NextResponse.json({
-      areas: toAreas(config['audit-areas']),
-      items: toItems(config['audit-schedule-items']),
-      archivedAreas: toAreas(config['archived-audit-areas']),
-      archivedItems: toItems(config['archived-audit-schedule-items']),
-      revision: getRevision(config),
+      areas: toAreas(config[storage.areas]),
+      items: toItems(config[storage.items]),
+      archivedAreas: toAreas(config[storage.archivedAreas]),
+      archivedItems: toItems(config[storage.archivedItems]),
+      revision: getRevision(config, storage),
       pendingChanges: context.canApprove ? requests.filter((change) => change.status === 'pending') : [],
     });
   } catch (error) {
@@ -371,13 +443,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const context = await getSessionContext(request);
-    if (!context.tenantId || !context.actorEmail) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== 'object') return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
+    const scope = getScheduleScope(request, body as Record<string, unknown>);
+    const context = await getSessionContext(request, scope);
+    if (!context.tenantId || !context.actorEmail) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const payload = getDecision((body as Record<string, unknown>).action)
-      ? await decideScheduleChange(context, body as Record<string, unknown>)
-      : await persistScheduleChange(context, body as Record<string, unknown>);
+      ? await decideScheduleChange(context, body as Record<string, unknown>, scope)
+      : await persistScheduleChange(context, body as Record<string, unknown>, scope);
     return NextResponse.json(payload);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to update the audit schedule.';

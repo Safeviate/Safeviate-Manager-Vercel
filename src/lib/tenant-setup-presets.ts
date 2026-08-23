@@ -176,7 +176,7 @@ export const SAFETY_QUALITY_LAYOUT_DEFINITIONS: PageLayoutDefinition[] = [
           { id: 'checklists', label: 'Checklists' },
           { id: 'audit-checklists', label: 'Audit Checklists' },
           { id: 'gap-analyses', label: 'Gap Analyses' },
-          { id: 'audit-schedule', label: 'Audit Schedule' },
+          { id: 'audit-schedule', label: 'Quality Schedule' },
           { id: 'coherence-matrix', label: 'Coherence Matrix' },
           { id: 'risk-plan', label: 'Risk Plan' },
           { id: 'task-tracker', label: 'Task Tracker' },

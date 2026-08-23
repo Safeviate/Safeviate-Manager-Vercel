@@ -256,8 +256,8 @@ export const menuConfig: MenuItem[] = [
       },
       {
         href: '/quality/audit-schedule',
-        label: 'Audit Schedule',
-        description: 'Plan and view the annual audit schedule.',
+        label: 'Quality Schedule',
+        description: 'Plan audits and view checklist runs and quality actions.',
         permissionId: 'quality-audit-schedule-view',
       },
       {

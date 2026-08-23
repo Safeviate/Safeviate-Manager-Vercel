@@ -72,7 +72,7 @@ const DEFAULT_HEADER_DESCRIPTIONS: Record<string, string> = {
   'Emergency Response Plan': 'Manage emergency contacts, triggers, and response records.',
   'Route Planner': 'Manage standardized and general aviation flight paths.',
   'Training Routes': 'Manage standardized training flight paths and sectors.',
-  'Annual Audit Schedule': 'Plan and track the annual audit program.',
+  'Quality Schedule': 'Plan audits and view quality work due throughout the year.',
   Audits: 'Review audit results and follow-up status.',
   'Coherence Matrix': 'Compare requirements, policies, and procedures for alignment.',
   'Risk Matrix': 'Visualize risk likelihood and severity across the organization.',

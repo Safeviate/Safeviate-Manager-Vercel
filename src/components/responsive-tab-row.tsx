@@ -110,7 +110,7 @@ export function ResponsiveTabRow({
                       buttonLikeTabs
                         ? `${HEADER_COMPACT_CONTROL_CLASS} text-[10px] font-medium shadow-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm`
                         : flatTabs
-                          ? `${HEADER_COMPACT_CONTROL_CLASS} bg-transparent px-4 tracking-[0.16em] data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none`
+                          ? `${HEADER_COMPACT_CONTROL_CLASS} bg-transparent px-4 tracking-[0.16em] text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none`
                           : `${HEADER_TAB_TRIGGER_CLASS} border bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none`,
                       joinedDesktopTabs && !flatTabs
                         ? "!rounded-none border-0 border-r border-input last:border-r-0 data-[state=active]:rounded-none"

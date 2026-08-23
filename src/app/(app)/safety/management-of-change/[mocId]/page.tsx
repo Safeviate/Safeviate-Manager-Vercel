@@ -6,6 +6,7 @@ import { CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Printer, PlusCircle, ShieldCheck, WandSparkles, ChevronDown, MoreHorizontal, FileText } from 'lucide-react';
+import { RecordMetadataRow } from '@/components/record-metadata-row';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -37,10 +38,10 @@ interface MocDetailPageProps {
 }
 
 const DetailItem = ({ label, value }: { label: string; value?: string | null }) => (
-    <div className="space-y-0.5">
-        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest leading-none">{label}</p>
-        <p className="text-sm font-bold text-foreground leading-tight">{value || 'N/A'}</p>
-    </div>
+  <div className="space-y-0.5">
+    <p className="text-[10px] font-black uppercase leading-none tracking-widest text-muted-foreground">{label}</p>
+    <p className="text-sm font-bold leading-tight text-foreground">{value || 'N/A'}</p>
+  </div>
 );
 
 export default function MocDetailPage({ params }: MocDetailPageProps) {
@@ -158,15 +159,12 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                     <CardTitle className="flex items-center gap-2 truncate text-xl font-black uppercase md:text-2xl">
                         {moc.mocNumber}: {moc.title}
                     </CardTitle>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                        <DetailItem label="Status" value={moc.status} />
-                        <Separator orientation="vertical" className="hidden h-6 md:block" />
-                        <DetailItem label="Department" value={departmentMap.get(moc.proposingDepartmentId)} />
-                        <Separator orientation="vertical" className="hidden h-6 md:block" />
-                        <DetailItem label="Responsible" value={personnelMap.get(moc.responsiblePersonId)} />
-                        <Separator orientation="vertical" className="hidden h-6 md:block" />
-                        <DetailItem label="Proposed" value={format(parseLocalDate(moc.proposalDate), 'dd MMM yyyy')} />
-                    </div>
+                    <RecordMetadataRow items={[
+                      { label: 'Status', value: moc.status },
+                      { label: 'Department', value: departmentMap.get(moc.proposingDepartmentId) },
+                      { label: 'Responsible', value: personnelMap.get(moc.responsiblePersonId) },
+                      { label: 'Proposed', value: format(parseLocalDate(moc.proposalDate), 'dd MMM yyyy') },
+                    ]} />
                 </div>
             </CardHeader>
 

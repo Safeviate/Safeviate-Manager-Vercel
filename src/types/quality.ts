@@ -19,6 +19,8 @@ export interface AuditScheduleItem {
     month: string;
     year: number;
     status: AuditScheduleStatus;
+    /** Exact planned date within the scheduled month (YYYY-MM-DD). */
+    plannedDate?: string;
 }
 
 export interface ClauseAnalysisEntry {
