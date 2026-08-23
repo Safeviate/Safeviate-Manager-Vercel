@@ -20,7 +20,7 @@ export interface ProjectTask {
   dueDate?: string;
   assigneeId?: string;
   phaseId?: string;
-  source?: 'Project' | 'MOC Mitigation';
+  source?: 'Project' | 'MOC Mitigation' | 'MOC Step';
   sourceId?: string;
   diary?: ProjectDiaryEntry[];
 }
@@ -30,6 +30,8 @@ export interface ProjectPhase {
   title: string;
   targetDate?: string;
   status: 'Not Started' | 'In Progress' | 'Completed';
+  source?: 'Project' | 'MOC Phase';
+  sourceId?: string;
 }
 
 export interface ProjectMilestone {

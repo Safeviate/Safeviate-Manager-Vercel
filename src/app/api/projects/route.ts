@@ -41,6 +41,7 @@ export async function POST(request: Request) {
       ownerId: incoming.ownerId, organizationId: incoming.organizationId || null,
       startDate: incoming.startDate, targetDate: incoming.targetDate,
       mocId: incoming.mocId, mocNumber: incoming.mocNumber, mocTitle: incoming.mocTitle,
+      phases: Array.isArray(incoming.phases) ? incoming.phases : [],
       tasks: Array.isArray(incoming.tasks) ? incoming.tasks : [],
       milestones: Array.isArray(incoming.milestones) ? incoming.milestones : [],
       risks: Array.isArray(incoming.risks) ? incoming.risks : [],

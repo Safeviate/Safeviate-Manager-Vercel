@@ -28,6 +28,7 @@ export type DocumentExpirySettings = {
   expiredColor: string;
   warningPeriods: WarningPeriod[];
 };
+type ProjectCompletionSettings = { defaultColor: string; overdueColor: string; warningPeriods: WarningPeriod[] };
 
 const defaultPeriodColor = '#facc15'; // yellow-400
 const defaultSafeColor = '#22c55e'; // green-500
@@ -69,6 +70,9 @@ export default function DocumentDatesPage() {
   const canManage = hasPermission('admin-settings-edit');
   
   const [expirySettings, setExpirySettings] = useState<DocumentExpirySettings | null>(null);
+  const [projectCompletion, setProjectCompletion] = useState<ProjectCompletionSettings>({ defaultColor: '#22c55e', overdueColor: '#ef4444', warningPeriods: [{ period: 7, color: '#f59e0b' }] });
+  const [newProjectPeriod, setNewProjectPeriod] = useState('');
+  const [newProjectColor, setNewProjectColor] = useState('#f59e0b');
   const [milestoneSettings, setMilestoneSettings] = useState<StudentMilestoneSettings | null>(null);
   const [instructorWarningSettings, setInstructorWarningSettings] = useState<InstructorHourWarningSettings | null>(null);
   const [inspectionSettings, setInspectionSettings] = useState<AircraftInspectionWarningSettings | null>(null);
@@ -126,6 +130,7 @@ export default function DocumentDatesPage() {
         };
 
         const exp = readSection<DocumentExpirySettings>('document-expiry-settings', { id: 'document-expiry', defaultColor: defaultSafeColor, expiredColor: defaultExpiredColor, warningPeriods: [] });
+        setProjectCompletion(readSection<ProjectCompletionSettings>('project-completion-alerts', { defaultColor: '#22c55e', overdueColor: '#ef4444', warningPeriods: [{ period: 7, color: '#f59e0b' }] }));
         const mile = readSection<StudentMilestoneSettings>('student-milestone-settings', { id: 'student-milestones', milestones: defaultMilestones });
         const inst = readSection<InstructorHourWarningSettings>('instructor-hour-warnings', { id: 'instructor-hour-warnings', warnings: defaultInstructorWarnings });
         const insp = readSection<AircraftInspectionWarningSettings>('inspection-warning-settings', { id: 'inspection-warnings', fiftyHourWarnings: defaultFiftyHourWarnings, oneHundredHourWarnings: defaultHundredHourWarnings });
@@ -361,6 +366,12 @@ export default function DocumentDatesPage() {
       );
     }
   };
+  const saveProjectCompletion = async (next: ProjectCompletionSettings) => {
+    await persistTenantConfig({ 'project-completion-alerts': next, 'document-expiry-settings': expirySettings, 'student-milestone-settings': milestoneSettings, 'instructor-hour-warnings': instructorWarningSettings, 'inspection-warning-settings': inspectionSettings });
+    setProjectCompletion(next);
+  };
+  const addProjectWarning = () => { const period = Number(newProjectPeriod); if (!Number.isFinite(period) || period <= 0) return; if (projectCompletion.warningPeriods?.some((item) => item.period === period)) return; void saveProjectCompletion({ ...projectCompletion, warningPeriods: [...(projectCompletion.warningPeriods || []), { period, color: newProjectColor }].sort((a, b) => a.period - b.period) }); setNewProjectPeriod(''); };
+  const removeProjectWarning = (period: number) => void saveProjectCompletion({ ...projectCompletion, warningPeriods: (projectCompletion.warningPeriods || []).filter((item) => item.period !== period) });
 
   const handleAddInstructorWarning = () => {
     const maxHours = parseInt(newInstructorHour || '0', 10);
@@ -507,6 +518,15 @@ export default function DocumentDatesPage() {
         <CardContent className="flex-1 p-0 overflow-hidden">
           <ScrollArea className="h-full">
             <div className="p-6 space-y-10 pb-24">
+              <div className="space-y-5 rounded-xl border bg-muted/5 p-5 shadow-inner">
+                <div><h2 className="font-black text-[10px] uppercase tracking-widest text-primary">Project Task Completion Colours</h2><p className="mt-1 text-xs text-muted-foreground">Set warning bands used by project and dashboard views to flag approaching completion dates.</p></div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="flex items-center justify-between rounded-xl border bg-background p-3"><span className="text-[10px] font-black uppercase tracking-widest">On track</span><Input type="color" value={projectCompletion.defaultColor} onChange={(e) => void saveProjectCompletion({ ...projectCompletion, defaultColor: e.target.value })} className="h-9 w-14 p-1" /></div>
+                  <div className="flex items-center justify-between rounded-xl border bg-background p-3"><span className="text-[10px] font-black uppercase tracking-widest">Overdue</span><Input type="color" value={projectCompletion.overdueColor} onChange={(e) => void saveProjectCompletion({ ...projectCompletion, overdueColor: e.target.value })} className="h-9 w-14 p-1" /></div>
+                </div>
+                <div className="space-y-2"><h4 className="text-[9px] font-black uppercase tracking-widest">Warning bands</h4>{projectCompletion.warningPeriods.map((warning) => <div key={warning.period} className="flex items-center justify-between rounded-xl border bg-background p-3"><div className="flex items-center gap-3"><span className="rounded-full px-3 py-1 text-[10px] font-black uppercase" style={{ backgroundColor: warning.color }}>Due soon</span><Input type="number" min="1" value={warning.period} onChange={(e) => { const period = Number(e.target.value); if (period > 0) void saveProjectCompletion({ ...projectCompletion, warningPeriods: projectCompletion.warningPeriods.map((item) => item.period === warning.period ? { ...item, period } : item) }); }} className="h-8 w-20" /><span className="text-[10px] font-black uppercase">days or less</span></div><div className="flex items-center gap-2"><Input type="color" value={warning.color} onChange={(e) => void saveProjectCompletion({ ...projectCompletion, warningPeriods: projectCompletion.warningPeriods.map((item) => item.period === warning.period ? { ...item, color: e.target.value } : item) })} className="h-8 w-12 p-1" /><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeProjectWarning(warning.period)}><Trash2 className="h-4 w-4" /></Button></div></div>)}</div>
+                <div className="flex gap-2 rounded-xl border bg-background p-3"><Input type="number" min="1" value={newProjectPeriod} onChange={(e) => setNewProjectPeriod(e.target.value)} placeholder="Days" className="h-9 w-28" /><Input type="color" value={newProjectColor} onChange={(e) => setNewProjectColor(e.target.value)} className="h-9 w-12 p-1" /><Button type="button" size="sm" onClick={addProjectWarning}>Add warning band</Button></div>
+              </div>
               
               {/* --- Section 1: Documents & Milestones --- */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

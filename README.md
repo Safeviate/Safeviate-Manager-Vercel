@@ -26,13 +26,13 @@ This repo now includes Prisma alongside existing Drizzle code during migration.
 1. Install deps:
 `npm install`
 
-2. Generate client:
+2. Start a local PostgreSQL service and create the `safeviate` database/user, or use the disposable Docker setup:
+`npm run local:setup`
+
+3. Generate client:
 `npm run prisma:generate`
 
-3. Push schema to the Azure database from local `.env.local`:
-`npm run prisma:push:local`
-
-Keep local auth URLs on `http://localhost:9002`, and set both `DATABASE_URL` and `DATABASE_URL_UNPOOLED` in `.env.local` to the Azure PostgreSQL connection string with `sslmode=verify-full`.
+Development uses `.env.development.local`, which points both Prisma URLs to local PostgreSQL on `localhost:5432` and the auth URL to `http://localhost:9002`. Production Azure and AWS settings remain in their deployment environments and are not used by the local app.
 
 ## Card Layout Standard
 

@@ -108,6 +108,15 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
+          // A fresh database has no tenant rows yet. Seeded admin sessions
+          // belong to the Safeviate master tenant, so ensure it exists before
+          // the session's foreign key is written.
+          await prisma.tenant.upsert({
+            where: { id: 'safeviate' },
+            update: {},
+            create: { id: 'safeviate', name: 'Safeviate' },
+          });
+
           const sessionId = await createTrackedSession({
             userId: SEED_USER_ID,
             tenantId: 'safeviate',
