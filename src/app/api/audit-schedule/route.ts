@@ -12,9 +12,10 @@ import type { AuditScheduleItem, AuditScheduleStatus } from '@/types/quality';
 
 const AUDIT_SCHEDULE_SCOPE = 'audit-schedule';
 const CHECKLIST_SCHEDULE_SCOPE = 'checklist-schedule';
+const TASK_SCHEDULE_SCOPE = 'task-schedule';
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-type ScheduleScope = 'audits' | 'checklists';
+type ScheduleScope = 'audits' | 'checklists' | 'tasks';
 
 type ScheduleStorage = {
   activityScope: string;
@@ -30,6 +31,20 @@ type ScheduleStorage = {
 };
 
 function getScheduleStorage(scope: ScheduleScope): ScheduleStorage {
+  if (scope === 'tasks') {
+    return {
+      activityScope: TASK_SCHEDULE_SCOPE,
+      label: 'task',
+      areaEntityType: 'task-schedule-area',
+      recoveryEntityType: 'task-schedule-area',
+      areas: 'task-schedule-areas',
+      items: 'task-schedule-items',
+      archivedAreas: 'archived-task-schedule-areas',
+      archivedItems: 'archived-task-schedule-items',
+      revision: 'task-schedule-revision',
+      requests: 'task-schedule-change-requests',
+    };
+  }
   if (scope === 'checklists') {
     return {
       activityScope: CHECKLIST_SCHEDULE_SCOPE,
@@ -60,7 +75,8 @@ function getScheduleStorage(scope: ScheduleScope): ScheduleStorage {
 
 function getScheduleScope(request: Request, body?: Record<string, unknown>): ScheduleScope {
   const requested = body?.scope ?? new URL(request.url).searchParams.get('scope');
-  return requested === 'checklists' ? 'checklists' : 'audits';
+  if (requested === 'checklists' || requested === 'tasks') return requested;
+  return 'audits';
 }
 
 type SessionContext = {
@@ -121,6 +137,9 @@ async function getSessionContext(request: Request, scope: ScheduleScope): Promis
   normalizePermissionIds(overrides.filter((value) => !value.startsWith('!'))).forEach((value) => granted.add(value));
   const has = (permission: string) => granted.has('*') || hasHierarchicalPermission(granted, permission, deniedPermissions);
 
+  // Tasks are scheduled work items on this screen, so they use the existing
+  // Quality Schedule permissions until a separate task-scheduling permission
+  // is introduced.
   const resource = scope === 'checklists' ? 'quality-checklists' : 'quality-audit-schedule';
   return {
     tenantId,

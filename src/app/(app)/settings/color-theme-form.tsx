@@ -545,6 +545,34 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
     preset.colors.accent === theme.accent
   ))?.name;
 
+  type SharedInteractionKey = 'background' | 'foreground' | 'border' | 'accent' | 'accent-foreground';
+  const sharedInteractionFields: Array<{ key: SharedInteractionKey; label: string; description: string }> = [
+    { key: 'background', label: 'Surface', description: 'Secondary button, menu, and popover fill.' },
+    { key: 'foreground', label: 'Text', description: 'Text and icon colour on the surface.' },
+    { key: 'border', label: 'Border', description: 'Shared outline and menu edge.' },
+    { key: 'accent', label: 'Hover / selected', description: 'Hover and selected-item fill.' },
+    { key: 'accent-foreground', label: 'Hover text', description: 'Text and icon colour on hover.' },
+  ];
+
+  const getSharedInteractionValue = (key: SharedInteractionKey) => buttonTheme[`button-secondary-${key}` as keyof typeof buttonTheme];
+
+  const setSharedInteractionValue = (key: SharedInteractionKey, value: string) => {
+    setButtonThemeValue(`button-secondary-${key}` as keyof typeof buttonTheme, value);
+    if (key === 'background') {
+      setPopoverThemeValue('popover', value);
+      setSidebarThemeValue('sidebar-button-background', value);
+    } else if (key === 'foreground') {
+      setPopoverThemeValue('popover-foreground', value);
+      setSidebarThemeValue('sidebar-foreground', value);
+    } else if (key === 'accent') {
+      setPopoverThemeValue('popover-accent', value);
+      setSidebarThemeValue('sidebar-accent', value);
+    } else if (key === 'accent-foreground') {
+      setPopoverThemeValue('popover-accent-foreground', value);
+      setSidebarThemeValue('sidebar-accent-foreground', value);
+    }
+  };
+
   const formatLabel = (key: string) => {
     if (key === 'header-button-background') return 'Header Button Fill';
     if (key === 'header-button-foreground') return 'Header Button Text';
@@ -686,10 +714,10 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                   <p className="text-[9px] font-bold uppercase tracking-tight opacity-80">Navigation and shell color</p>
                 </div>
                 <div className="space-y-2">
-                  <div className="rounded-xl px-3 py-2 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: sidebarTheme['sidebar-accent'], color: sidebarTheme['sidebar-accent-foreground'] }}>
+                  <div className="rounded-xl px-3 py-2 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: buttonTheme['button-secondary-accent'], color: buttonTheme['button-secondary-accent-foreground'] }}>
                     Selected item
                   </div>
-                  <div className="rounded-xl px-3 py-2 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: sidebarTheme['sidebar-button-background'], color: sidebarTheme['sidebar-foreground'] }}>
+                  <div className="rounded-xl px-3 py-2 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: buttonTheme['button-secondary-background'], color: buttonTheme['button-secondary-foreground'] }}>
                     Sidebar menu surface
                   </div>
                   <div className="rounded-xl border px-3 py-2 text-[9px] font-black uppercase tracking-widest" style={{ borderColor: sidebarTheme['sidebar-border'] }}>
@@ -740,7 +768,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <span className="rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: popoverTheme.popover, color: popoverTheme['popover-foreground'], border: `1px solid ${popoverTheme['popover-accent']}` }}>
+                  <span className="rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: buttonTheme['button-secondary-background'], color: buttonTheme['button-secondary-foreground'], border: `1px solid ${buttonTheme['button-secondary-border']}` }}>
                     Popover
                   </span>
                   <span className="rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: swimlaneTheme['swimlane-header-background'], color: swimlaneTheme['swimlane-header-foreground'] }}>
@@ -846,8 +874,30 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
 
           <div>
             <h2 className="text-sm font-black uppercase tracking-tight mb-4 text-foreground">Advanced Component Theming</h2>
-            <p className="mb-5 text-[10px] font-black uppercase italic text-foreground/75">These controls fine-tune how specific surfaces, headers, and panels behave.</p>
+            <p className="mb-5 text-[10px] font-black uppercase italic text-foreground/75">These controls fine-tune genuinely distinct surfaces. Shared secondary interactions are configured once below.</p>
             <div className="space-y-6">
+              <section className={PAGE_FORMAT_TIGHT_PANEL_CLASS}>
+                <div className="space-y-1 border-b pb-2">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-primary">Shared Secondary Interaction</h3>
+                  <p className="text-[9px] font-black uppercase italic text-foreground/60">One visual language for secondary buttons, sidebar menu items, dropdowns, popovers, and selected menu states.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 pt-3 md:grid-cols-5">
+                  {sharedInteractionFields.map(({ key, label, description }) => (
+                    <div key={key} className="space-y-1.5">
+                      <Label htmlFor={`shared-interaction-${key}`} className="text-[9px] font-black uppercase text-foreground">{label}</Label>
+                      <Input
+                        id={`shared-interaction-${key}`}
+                        type="color"
+                        value={getSharedInteractionValue(key)}
+                        onChange={(e) => setSharedInteractionValue(key, e.target.value)}
+                        className="h-10 w-full cursor-pointer rounded-md border p-1 shadow-sm"
+                      />
+                      <p className="text-[8px] font-bold uppercase leading-tight text-muted-foreground">{description}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
               <Collapsible open={isSectionOpen('buttons')} onOpenChange={() => toggleAdvancedSection('buttons')}>
                 <section className={PAGE_FORMAT_TIGHT_PANEL_CLASS}>
                   <CollapsibleTrigger className="flex w-full items-center justify-between border-b pb-2 text-left">
@@ -862,11 +912,6 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                           title: 'Primary Buttons',
                           description: 'Controls fill, text, border, and hover states for main call-to-action buttons.',
                           entries: Object.entries(buttonTheme).filter(([name]) => name.startsWith('button-primary-')),
-                        },
-                        {
-                          title: 'Secondary Buttons',
-                          description: 'Controls fill, text, border, and hover states for outline and utility buttons.',
-                          entries: Object.entries(buttonTheme).filter(([name]) => name.startsWith('button-secondary-')),
                         },
                       ].map((group) => (
                         <div key={group.title} className="space-y-3 rounded-xl border bg-muted/10 p-3">
@@ -1000,35 +1045,8 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                   </CollapsibleTrigger>
                   <CollapsibleContent className="space-y-4 pt-2">
                     <p className="text-[9px] font-black uppercase italic text-foreground/60">Controls the sidebar base surface, button surface, and navigation contrast.</p>
-                    {(() => {
-                      const sidebarMenuSurface =
-                        sidebarTheme['sidebar-button-background'] ??
-                        sidebarTheme['sidebar-background'] ??
-                        '#e8f1fa';
-
-                      return (
-                        <div className="rounded-xl border bg-muted/10 p-3 shadow-sm">
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Sidebar Menu Surface</p>
-                            <p className="text-[9px] font-black uppercase tracking-tight text-foreground/75">Sets the fill behind each sidebar menu row.</p>
-                          </div>
-                          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div className="space-y-1.5">
-                              <Label htmlFor="sidebar-button-background" className="text-[9px] font-black uppercase text-foreground">Sidebar Menu Surface</Label>
-                              <Input
-                                id="sidebar-button-background"
-                                type="color"
-                                value={sidebarMenuSurface}
-                                onChange={(e) => setSidebarThemeValue('sidebar-button-background', e.target.value)}
-                                className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {Object.entries(sidebarTheme).map(([name, value]) => (
+                      {Object.entries(sidebarTheme).filter(([name]) => !['sidebar-button-background', 'sidebar-foreground', 'sidebar-accent', 'sidebar-accent-foreground'].includes(name)).map(([name, value]) => (
                         <div key={name} className="space-y-1.5">
                           <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
                           <Input id={name} type="color" value={value} onChange={(e) => setSidebarThemeValue(name as keyof typeof sidebarTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
@@ -1252,25 +1270,9 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                 </section>
               </Collapsible>
 
-              <Collapsible open={isSectionOpen('popover')} onOpenChange={() => toggleAdvancedSection('popover')}>
-                <section className={PAGE_FORMAT_TIGHT_PANEL_CLASS}>
-                  <CollapsibleTrigger className="flex w-full items-center justify-between border-b pb-2 text-left">
-                    <span className="text-[10px] font-black uppercase text-primary tracking-widest">Popovers</span>
-                    <ChevronDown className={`h-4 w-4 transition-transform ${isSectionOpen('popover') ? 'rotate-180' : ''}`} />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-4 pt-2">
-                    <p className="text-[9px] font-black uppercase italic text-foreground/60">Used by dropdowns, tooltips, and overlay surfaces.</p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {Object.entries(popoverTheme).map(([name, value]) => (
-                        <div key={name} className="space-y-1.5">
-                          <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
-                          <Input id={name} type="color" value={value} onChange={(e) => setPopoverThemeValue(name as keyof typeof popoverTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
-                        </div>
-                      ))}
-                    </div>
-                  </CollapsibleContent>
-                </section>
-              </Collapsible>
+              <div className="rounded-xl border border-dashed bg-muted/5 px-3 py-2 text-[9px] font-black uppercase italic text-muted-foreground">
+                Dropdowns, popovers, and menu-item hover states inherit the Shared Secondary Interaction settings above.
+              </div>
             </div>
           </div>
 

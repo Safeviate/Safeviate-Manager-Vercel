@@ -536,13 +536,13 @@ const SidebarMenuItem = React.forwardRef<
 SidebarMenuItem.displayName = "SidebarMenuItem"
 
 const sidebarMenuButtonVariants = cva(
-        "peer/menu-button mx-0 flex w-full items-center gap-3 overflow-hidden rounded-none border-l-[3px] border-l-sidebar-border/70 bg-[hsl(var(--sidebar-button-background))] px-3 py-2.5 text-left text-sm outline-none ring-sidebar-ring transition-colors hover:bg-[hsl(var(--sidebar-button-background)/0.92)] focus-visible:ring-2 active:translate-y-0 disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:border-l-sidebar-foreground/80 data-[active=true]:bg-[hsl(var(--sidebar-button-background)/0.88)] data-[active=true]:font-semibold data-[active=true]:hover:bg-[hsl(var(--sidebar-button-background)/0.88)] data-[active=true]:hover:text-sidebar-foreground data-[active=true]:hover:[&>svg]:opacity-100 data-[state=open]:hover:bg-[hsl(var(--sidebar-button-background)/0.92)] group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:!p-2 [&>span:last-child]:truncate [&>svg]:size-5 [&>svg]:shrink-0 [&>svg]:opacity-65 data-[active=true]:[&>svg]:opacity-100 hover:[&>svg]:opacity-100",
+        "peer/menu-button mx-0 flex w-full items-center gap-3 overflow-hidden rounded-none border-l-[3px] border-l-sidebar-border/70 bg-button-secondary px-3 py-2.5 text-left text-sm text-button-secondary-foreground outline-none ring-sidebar-ring transition-colors hover:bg-button-secondary-accent hover:text-button-secondary-accent-foreground focus-visible:ring-2 active:translate-y-0 disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:border-l-button-secondary-border data-[active=true]:bg-button-secondary-accent data-[active=true]:font-semibold data-[active=true]:hover:bg-button-secondary-accent data-[active=true]:hover:text-button-secondary-accent-foreground data-[active=true]:hover:[&>svg]:opacity-100 data-[state=open]:hover:bg-button-secondary-accent group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:!p-2 [&>span:last-child]:truncate [&>svg]:size-5 [&>svg]:shrink-0 [&>svg]:opacity-65 data-[active=true]:[&>svg]:opacity-100 hover:[&>svg]:opacity-100",
   {
     variants: {
       variant: {
-        default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        default: "hover:bg-button-secondary-accent hover:text-button-secondary-accent-foreground",
         outline:
-          "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
+          "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-button-secondary-accent hover:text-button-secondary-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--button-secondary-accent))]",
       },
       size: {
         default: "h-10 text-sm",
@@ -630,7 +630,7 @@ const SidebarMenuAction = React.forwardRef<
       ref={ref}
       data-sidebar="menu-action"
       className={cn(
-        "absolute right-1 top-1.5 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground outline-none ring-sidebar-ring transition-transform hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 peer-hover/menu-button:text-sidebar-accent-foreground [&>svg]:size-4 [&>svg]:shrink-0",
+        "absolute right-1 top-1.5 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-button-secondary-foreground outline-none ring-sidebar-ring transition-transform hover:bg-button-secondary-accent hover:text-button-secondary-accent-foreground focus-visible:ring-2 peer-hover/menu-button:text-button-secondary-accent-foreground [&>svg]:size-4 [&>svg]:shrink-0",
         // Increases the hit area of the button on mobile.
         "after:absolute after:-inset-2 after:md:hidden",
         "peer-data-[size=sm]/menu-button:top-1",
@@ -751,8 +751,8 @@ const SidebarMenuSubButton = React.forwardRef<
       data-size={size}
       data-active={isActive}
       className={cn(
-        "flex h-8 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-none border-0 bg-[hsl(var(--sidebar-button-background)/0.72)] px-2.5 text-sidebar-foreground outline-none ring-sidebar-ring transition-[background-color,box-shadow,color] hover:bg-[hsl(var(--sidebar-button-background)/0.84)] focus-visible:ring-2 active:translate-y-0 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground",
-        "data-[active=true]:bg-[hsl(var(--sidebar-button-background)/0.88)] data-[active=true]:font-semibold data-[active=true]:shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border)/0.4)] data-[active=true]:hover:bg-[hsl(var(--sidebar-button-background)/0.88)] data-[active=true]:hover:text-sidebar-foreground data-[active=true]:hover:[&>svg]:opacity-100",
+      "flex h-8 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-none border-0 bg-button-secondary px-2.5 text-button-secondary-foreground outline-none ring-sidebar-ring transition-[background-color,box-shadow,color] hover:bg-button-secondary-accent hover:text-button-secondary-accent-foreground focus-visible:ring-2 active:translate-y-0 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-button-secondary-accent-foreground",
+      "data-[active=true]:bg-button-secondary-accent data-[active=true]:font-semibold data-[active=true]:shadow-[inset_0_0_0_1px_hsl(var(--button-secondary-border)/0.4)] data-[active=true]:hover:bg-button-secondary-accent data-[active=true]:hover:text-button-secondary-accent-foreground data-[active=true]:hover:[&>svg]:opacity-100",
         size === "sm" && "text-xs",
         size === "md" && "text-sm",
         "group-data-[collapsible=icon]:hidden",

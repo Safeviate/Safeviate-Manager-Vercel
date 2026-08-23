@@ -111,7 +111,7 @@ const renderNestedSubItems = (
             <SidebarMenuSubButton
               asChild
               isActive={isActive}
-              className="h-9 w-full translate-x-0 rounded-md bg-transparent px-3.5 py-0 text-sm leading-none font-medium tracking-[-0.01em] text-sidebar-foreground/76 transition-[background-color,color] hover:bg-sidebar-accent/20 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent/20 focus-visible:text-sidebar-foreground data-[active=true]:bg-sidebar-accent/20 data-[active=true]:font-semibold data-[active=true]:text-sidebar-foreground data-[active=true]:shadow-none data-[active=true]:hover:bg-sidebar-accent/20"
+              className="h-9 w-full translate-x-0 rounded-md bg-transparent px-3.5 py-0 text-sm leading-none font-medium tracking-[-0.01em] text-button-secondary-foreground transition-[background-color,color] hover:bg-button-secondary-accent hover:text-button-secondary-accent-foreground focus-visible:bg-button-secondary-accent focus-visible:text-button-secondary-accent-foreground data-[active=true]:bg-button-secondary-accent data-[active=true]:font-semibold data-[active=true]:text-button-secondary-accent-foreground data-[active=true]:shadow-none data-[active=true]:hover:bg-button-secondary-accent"
             >
               <Link
                 href={subItem.href}
@@ -128,7 +128,7 @@ const renderNestedSubItems = (
                     <SidebarMenuSubButton
                       asChild
                       isActive={normalizePath(currentPathname) === normalizePath(child.href) || selectedSubHref === child.href}
-                      className="h-8 w-full translate-x-0 rounded-md bg-transparent px-3 text-[11px] leading-none font-medium tracking-[-0.01em] text-sidebar-foreground/68 transition-[background-color,color] hover:bg-sidebar-accent/15 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent/15 focus-visible:text-sidebar-foreground data-[active=true]:bg-sidebar-accent/15 data-[active=true]:font-semibold data-[active=true]:text-sidebar-foreground data-[active=true]:shadow-none data-[active=true]:hover:bg-sidebar-accent/15"
+                      className="h-8 w-full translate-x-0 rounded-md bg-transparent px-3 text-[11px] leading-none font-medium tracking-[-0.01em] text-button-secondary-foreground transition-[background-color,color] hover:bg-button-secondary-accent hover:text-button-secondary-accent-foreground focus-visible:bg-button-secondary-accent focus-visible:text-button-secondary-accent-foreground data-[active=true]:bg-button-secondary-accent data-[active=true]:font-semibold data-[active=true]:text-button-secondary-accent-foreground data-[active=true]:shadow-none data-[active=true]:hover:bg-button-secondary-accent"
                     >
                       <Link
                         href={child.href}

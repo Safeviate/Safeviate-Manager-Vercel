@@ -294,6 +294,11 @@ export default function AuditSchedulePage() {
   const [archivedChecklistAreas, setArchivedChecklistAreas] = useState<string[]>([]);
   const [archivedChecklistSchedule, setArchivedChecklistSchedule] = useState<AuditScheduleItem[]>([]);
   const [checklistRevision, setChecklistRevision] = useState(1);
+  const [taskAreas, setTaskAreas] = useState<string[]>([]);
+  const [taskSchedule, setTaskSchedule] = useState<AuditScheduleItem[]>([]);
+  const [archivedTaskAreas, setArchivedTaskAreas] = useState<string[]>([]);
+  const [archivedTaskSchedule, setArchivedTaskSchedule] = useState<AuditScheduleItem[]>([]);
+  const [taskRevision, setTaskRevision] = useState(1);
   const [isArchivedOpen, setIsArchivedOpen] = useState(false);
   const [isChangesOpen, setIsChangesOpen] = useState(false);
   const [isOccurrencesOpen, setIsOccurrencesOpen] = useState(false);
@@ -302,18 +307,20 @@ export default function AuditSchedulePage() {
   const [isAddAreaOpen, setIsAddAreaOpen] = useState(false);
   const [newAreaName, setNewAreaName] = useState('');
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
-  const [activeScheduleTab, setActiveScheduleTab] = useState<'audits' | 'checklists'>('audits');
+  const [activeScheduleTab, setActiveScheduleTab] = useState<'audits' | 'checklists' | 'tasks'>('audits');
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-        const [response, checklistScheduleResponse] = await Promise.all([
+        const [response, checklistScheduleResponse, taskScheduleResponse] = await Promise.all([
           fetch('/api/audit-schedule', { cache: 'no-store' }),
           canViewChecklists ? fetch('/api/audit-schedule?scope=checklists', { cache: 'no-store' }) : Promise.resolve(null),
+          fetch('/api/audit-schedule?scope=tasks', { cache: 'no-store' }),
         ]);
-        const [payload, checklistSchedulePayload] = await Promise.all([
+        const [payload, checklistSchedulePayload, taskSchedulePayload] = await Promise.all([
           response.json().catch(() => null),
           checklistScheduleResponse?.json().catch(() => null),
+          taskScheduleResponse.json().catch(() => null),
         ]);
         if (!response.ok) {
           throw new Error(typeof payload?.error === 'string' ? payload.error : 'Unable to load the audit schedule.');
@@ -333,6 +340,14 @@ export default function AuditSchedulePage() {
         if (Array.isArray(checklistSchedulePayload?.archivedAreas)) setArchivedChecklistAreas(checklistSchedulePayload.archivedAreas);
         if (Array.isArray(checklistSchedulePayload?.archivedItems)) setArchivedChecklistSchedule(checklistSchedulePayload.archivedItems as AuditScheduleItem[]);
         if (Number.isSafeInteger(checklistSchedulePayload?.revision) && checklistSchedulePayload.revision > 0) setChecklistRevision(checklistSchedulePayload.revision);
+        if (!taskScheduleResponse.ok) {
+          throw new Error(typeof taskSchedulePayload?.error === 'string' ? taskSchedulePayload.error : 'Unable to load the task schedule.');
+        }
+        if (Array.isArray(taskSchedulePayload?.areas)) setTaskAreas(taskSchedulePayload.areas);
+        if (Array.isArray(taskSchedulePayload?.items)) setTaskSchedule((taskSchedulePayload.items as AuditScheduleItem[]).filter((item) => item.year === currentYear));
+        if (Array.isArray(taskSchedulePayload?.archivedAreas)) setArchivedTaskAreas(taskSchedulePayload.archivedAreas);
+        if (Array.isArray(taskSchedulePayload?.archivedItems)) setArchivedTaskSchedule(taskSchedulePayload.archivedItems as AuditScheduleItem[]);
+        if (Number.isSafeInteger(taskSchedulePayload?.revision) && taskSchedulePayload.revision > 0) setTaskRevision(taskSchedulePayload.revision);
     } catch (e) {
         console.error("Failed to load audit schedule", e);
         setLoadError(e instanceof Error ? e.message : 'Unable to load the audit schedule.');
@@ -352,13 +367,14 @@ export default function AuditSchedulePage() {
   }
 
   const isChecklistSchedule = activeScheduleTab === 'checklists';
-  const activeAreas = isChecklistSchedule ? checklistAreas : auditAreas;
-  const activeItems = isChecklistSchedule ? checklistSchedule : schedule;
-  const activeArchivedAreas = isChecklistSchedule ? archivedChecklistAreas : archivedAreas;
-  const activeArchivedItems = isChecklistSchedule ? archivedChecklistSchedule : archivedSchedule;
-  const activeRevision = isChecklistSchedule ? checklistRevision : revision;
-  const scheduleLabel = isChecklistSchedule ? 'checklist' : 'audit';
-  const scheduleLabelTitle = isChecklistSchedule ? 'Checklist' : 'Audit';
+  const isTaskSchedule = activeScheduleTab === 'tasks';
+  const activeAreas = isChecklistSchedule ? checklistAreas : isTaskSchedule ? taskAreas : auditAreas;
+  const activeItems = isChecklistSchedule ? checklistSchedule : isTaskSchedule ? taskSchedule : schedule;
+  const activeArchivedAreas = isChecklistSchedule ? archivedChecklistAreas : isTaskSchedule ? archivedTaskAreas : archivedAreas;
+  const activeArchivedItems = isChecklistSchedule ? archivedChecklistSchedule : isTaskSchedule ? archivedTaskSchedule : archivedSchedule;
+  const activeRevision = isChecklistSchedule ? checklistRevision : isTaskSchedule ? taskRevision : revision;
+  const scheduleLabel = isChecklistSchedule ? 'checklist' : isTaskSchedule ? 'task' : 'audit';
+  const scheduleLabelTitle = isChecklistSchedule ? 'Checklist' : isTaskSchedule ? 'Task' : 'Audit';
   const canCreateSchedule = isChecklistSchedule ? canCreateChecklistSchedule : canCreateAuditSchedule;
   const canEditSchedule = isChecklistSchedule ? canEditChecklistSchedule : canEditAuditSchedule;
   const canArchiveSchedule = isChecklistSchedule ? canDeleteChecklistSchedule : canDeleteAuditSchedule;
@@ -371,6 +387,14 @@ export default function AuditSchedulePage() {
       setArchivedChecklistAreas(Array.isArray(result.archivedAreas) ? result.archivedAreas : []);
       setArchivedChecklistSchedule(Array.isArray(result.archivedItems) ? result.archivedItems : []);
       if (Number.isSafeInteger(result.revision) && result.revision > 0) setChecklistRevision(result.revision);
+      return;
+    }
+    if (isTaskSchedule) {
+      setTaskAreas(result.areas);
+      setTaskSchedule(Array.isArray(result.items) ? result.items.filter((item) => item.year === currentYear) : []);
+      setArchivedTaskAreas(Array.isArray(result.archivedAreas) ? result.archivedAreas : []);
+      setArchivedTaskSchedule(Array.isArray(result.archivedItems) ? result.archivedItems : []);
+      if (Number.isSafeInteger(result.revision) && result.revision > 0) setTaskRevision(result.revision);
       return;
     }
     setAuditAreas(result.areas);
@@ -488,6 +512,7 @@ export default function AuditSchedulePage() {
   const scheduleTabs = [
     { value: 'audits', label: 'Audits', icon: ClipboardCheck },
     ...(canViewChecklists ? [{ value: 'checklists', label: 'Checklists', icon: CalendarDays }] : []),
+    { value: 'tasks', label: 'Tasks', icon: Check },
   ];
   const scheduleRowHeights = 'grid-rows-[56px_repeat(12,44px)]';
 
@@ -531,12 +556,16 @@ export default function AuditSchedulePage() {
             />
             <ResponsiveTabRow
               value={activeScheduleTab}
-              onValueChange={(value) => setActiveScheduleTab(value as 'audits' | 'checklists')}
+              onValueChange={(value) => setActiveScheduleTab(value as 'audits' | 'checklists' | 'tasks')}
               options={scheduleTabs}
               placeholder="Select schedule view"
               className="border-b bg-muted/5 px-3 py-2 shrink-0"
               flatTabs
             />
+            <div className="flex shrink-0 items-center gap-2 border-b bg-muted/5 px-4 py-2 text-[11px] text-muted-foreground">
+              <Badge variant="outline" className="h-5 border-blue-200 bg-blue-50 px-2 text-[10px] font-semibold text-blue-700">{scheduleLabelTitle}</Badge>
+              <span>{isTaskSchedule ? 'Standalone work item — no checklist required.' : isChecklistSchedule ? 'Repeatable steps completed as a checklist.' : 'Formal review with findings and sign-off.'}</span>
+            </div>
             {loadError ? <div className="mx-4 mt-4 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive" role="alert">{loadError}</div> : null}
             <Dialog open={isArchivedOpen} onOpenChange={setIsArchivedOpen}>
               <DialogContent>
@@ -737,7 +766,7 @@ export default function AuditSchedulePage() {
                 </DialogHeader>
                 <div className="py-4">
                     <Label htmlFor="new-area-name">Area Name</Label>
-                    <Input id="new-area-name" placeholder={isChecklistSchedule ? 'e.g., Apron readiness' : 'e.g., Maintenance'} value={newAreaName} onChange={(e) => setNewAreaName(e.target.value)} />
+                    <Input id="new-area-name" placeholder={isChecklistSchedule ? 'e.g., Apron readiness' : isTaskSchedule ? 'e.g., Review fire extinguisher records' : 'e.g., Maintenance'} value={newAreaName} onChange={(e) => setNewAreaName(e.target.value)} />
                 </div>
                 <DialogFooter>
                     <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
