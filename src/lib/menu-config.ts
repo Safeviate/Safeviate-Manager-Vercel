@@ -195,6 +195,12 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'safety-view',
     subItems: [
       {
+        href: '/safety/dashboard',
+        label: 'Safety Dashboard',
+        description: 'Monitor reporting, risk exposure, and safety action health.',
+        permissionId: 'safety-view',
+      },
+      {
         href: '/safety/risk-matrix',
         label: 'Risk Matrix',
         description: 'Visualize the organizational risk landscape.',
@@ -240,6 +246,12 @@ export const menuConfig: MenuItem[] = [
     icon: CheckSquare,
     permissionId: 'quality-view',
     subItems: [
+      {
+        href: '/quality/dashboard',
+        label: 'Quality Dashboard',
+        description: 'Track quality delivery, findings, and corrective-action health.',
+        permissionId: 'quality-view',
+      },
       {
         href: '/quality/checklists',
         label: 'Checklists',
