@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Card,
@@ -162,7 +163,7 @@ function StatusSelector({ month, year, initialStatus, initialDate, onSave }: Sta
 
 interface AreaActionsProps {
     area: string;
-    entityLabel: 'Audit' | 'Checklist';
+    entityLabel: 'Audit' | 'Checklist' | 'Task';
     canEdit: boolean;
     canDelete: boolean;
     onEdit: (oldName: string, newName: string, reason: string) => void;
@@ -386,7 +387,7 @@ export default function AuditSchedulePage() {
       setChecklistSchedule(Array.isArray(result.items) ? result.items.filter((item) => item.year === currentYear) : []);
       setArchivedChecklistAreas(Array.isArray(result.archivedAreas) ? result.archivedAreas : []);
       setArchivedChecklistSchedule(Array.isArray(result.archivedItems) ? result.archivedItems : []);
-      if (Number.isSafeInteger(result.revision) && result.revision > 0) setChecklistRevision(result.revision);
+      if (typeof result.revision === 'number' && Number.isSafeInteger(result.revision) && result.revision > 0) setChecklistRevision(result.revision);
       return;
     }
     if (isTaskSchedule) {
@@ -394,14 +395,14 @@ export default function AuditSchedulePage() {
       setTaskSchedule(Array.isArray(result.items) ? result.items.filter((item) => item.year === currentYear) : []);
       setArchivedTaskAreas(Array.isArray(result.archivedAreas) ? result.archivedAreas : []);
       setArchivedTaskSchedule(Array.isArray(result.archivedItems) ? result.archivedItems : []);
-      if (Number.isSafeInteger(result.revision) && result.revision > 0) setTaskRevision(result.revision);
+      if (typeof result.revision === 'number' && Number.isSafeInteger(result.revision) && result.revision > 0) setTaskRevision(result.revision);
       return;
     }
     setAuditAreas(result.areas);
     setSchedule(Array.isArray(result.items) ? result.items.filter((item) => item.year === currentYear) : []);
     setArchivedAreas(Array.isArray(result.archivedAreas) ? result.archivedAreas : []);
     setArchivedSchedule(Array.isArray(result.archivedItems) ? result.archivedItems : []);
-    if (Number.isSafeInteger(result.revision) && result.revision > 0) setRevision(result.revision);
+    if (typeof result.revision === 'number' && Number.isSafeInteger(result.revision) && result.revision > 0) setRevision(result.revision);
   };
 
   const runScheduleAction = async (action: string, payload: Record<string, unknown>) => {
@@ -530,6 +531,11 @@ export default function AuditSchedulePage() {
                 title="Quality Schedule"
                 actions={(
                     <div className="flex items-center gap-2">
+                      <Button asChild variant="outline" size="sm" className={HEADER_COMPACT_CONTROL_CLASS}>
+                        <Link href="/dashboard/calendar">
+                          <CalendarDays className="mr-1.5 h-3.5 w-3.5" /> Company Calendar
+                        </Link>
+                      </Button>
                       {!isChecklistSchedule && canApproveAuditSchedule ? <Button variant="outline" size="sm" onClick={() => setIsChangesOpen(true)} className={HEADER_COMPACT_CONTROL_CLASS}>
                         <ClipboardCheck className="mr-1.5 h-3.5 w-3.5" /> Changes ({pendingChanges.length})
                       </Button> : null}

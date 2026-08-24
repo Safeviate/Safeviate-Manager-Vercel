@@ -47,6 +47,10 @@ export const menuConfig: MenuItem[] = [
     href: '/dashboard',
     label: 'Company Dashboard',
     icon: GaugeCircle,
+    subItems: [
+      { href: '/dashboard', label: 'Company Overview' },
+      { href: '/dashboard/calendar', label: 'Company Calendar' },
+    ],
   },
   {
     href: '/my-dashboard',

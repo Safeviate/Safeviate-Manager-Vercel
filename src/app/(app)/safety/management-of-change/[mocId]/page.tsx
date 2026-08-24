@@ -156,7 +156,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
         <div className="sticky top-0 z-30 bg-card rounded-xl border overflow-hidden flex flex-col shadow-none mb-6 no-print shrink-0">
             <CardHeader className="bg-muted/5 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-3 shrink-0">
                 <div className="flex-1 min-w-0">
-                    <CardTitle className="flex items-center gap-2 truncate text-xl font-black uppercase md:text-2xl">
+                    <CardTitle className="flex items-center gap-2 truncate text-lg font-black uppercase md:text-xl">
                         {moc.mocNumber}: {moc.title}
                     </CardTitle>
                     <RecordMetadataRow items={[
