@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Building2, ClipboardPlus, FileText, ImageIcon, MapPinned, Plus, Trash2, Wrench } from 'lucide-react';
 import { MainPageHeader, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +30,8 @@ const blankFacility = (): Facility => ({ id: crypto.randomUUID(), name: '', type
 export default function FacilitiesPage() {
   const { isLoading: isAccessLoading, isAllowed } = useTenantRouteAccess({ href: '/assets/facilities' });
   const { hasPermission } = usePermissions();
+  const searchParams = useSearchParams();
+  const requestedFacilityId = searchParams?.get('facilityId')?.trim() || '';
   const { toast } = useToast();
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [documents, setDocuments] = useState<CompanyDocument[]>([]);
@@ -59,14 +62,14 @@ export default function FacilitiesPage() {
       const [facilitiesPayload, documentsPayload, toolsPayload, reportsPayload] = await Promise.all([facilitiesResponse.json(), documentsResponse.json(), toolsResponse.json(), reportsResponse.json()]);
       const rows = Array.isArray(facilitiesPayload.facilities) ? facilitiesPayload.facilities : [];
       setFacilities(rows);
-      setSelectedId((current) => current && rows.some((facility: Facility) => facility.id === current) ? current : rows[0]?.id || null);
+      setSelectedId((current) => requestedFacilityId && rows.some((facility: Facility) => facility.id === requestedFacilityId) ? requestedFacilityId : current && rows.some((facility: Facility) => facility.id === current) ? current : rows[0]?.id || null);
       setDocuments(Array.isArray(documentsPayload.documents) ? documentsPayload.documents : []);
       setTools(Array.isArray(toolsPayload.tools) ? toolsPayload.tools : []);
       setMaintenanceReports(Array.isArray(reportsPayload.reports) ? reportsPayload.reports : []);
     } catch {
       toast({ variant: 'destructive', title: 'Load failed', description: 'Could not load facilities.' });
     } finally { setLoading(false); }
-  }, [toast]);
+  }, [requestedFacilityId, toast]);
 
   useEffect(() => { void load(); }, [load]);
 

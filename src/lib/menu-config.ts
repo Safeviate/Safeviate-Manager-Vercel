@@ -354,6 +354,20 @@ export const menuConfig: MenuItem[] = [
     label: 'Facilities',
     icon: Building2,
     permissionId: 'operations-view',
+    subItems: [
+      {
+        href: '/assets/facilities',
+        label: 'Facility Register',
+        description: 'Manage airports, heliports, zones, equipment, and controlled documents.',
+        permissionId: 'operations-view',
+      },
+      {
+        href: '/assets/facilities/reports',
+        label: 'Maintenance Reports',
+        description: 'Review and manage maintenance reports across all facilities.',
+        permissionId: 'operations-view',
+      },
+    ],
   },
   {
     href: '/maintenance',
