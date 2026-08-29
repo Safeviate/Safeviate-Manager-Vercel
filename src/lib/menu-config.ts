@@ -23,6 +23,7 @@ import {
   BookOpen,
   Wrench,
   FolderKanban,
+  Building2,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -347,6 +348,12 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'assets-view',
       },
     ],
+  },
+  {
+    href: '/assets/facilities',
+    label: 'Facilities',
+    icon: Building2,
+    permissionId: 'operations-view',
   },
   {
     href: '/maintenance',

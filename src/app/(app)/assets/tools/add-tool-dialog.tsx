@@ -38,6 +38,8 @@ const formSchema = z.object({
   manufacturer: z.string().optional(),
   modelNumber: z.string().optional(),
   serialNumber: z.string().min(1, 'Serial number is crucial for traceability.'),
+  assetTag: z.string().optional(),
+  equipmentCategory: z.string().optional(),
   ownerType: z.enum(['COMPANY', 'CLIENT', 'EMPLOYEE']),
   status: z.enum(['CALIBRATED', 'OUT_OF_CALIBRATION', 'REFERENCE_ONLY', 'DAMAGED', 'LOST']),
   lastCalibrationDate: z.string().optional(),
@@ -56,6 +58,8 @@ export function AddToolDialog() {
       manufacturer: '',
       modelNumber: '',
       serialNumber: '',
+      assetTag: '',
+      equipmentCategory: '',
       ownerType: 'COMPANY',
       status: 'CALIBRATED',
       lastCalibrationDate: '',
@@ -120,6 +124,10 @@ export function AddToolDialog() {
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Equipment Name</FormLabel><FormControl><Input placeholder="e.g. Torque Wrench" {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="serialNumber" render={({ field }) => (<FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input placeholder="Required for tracing" {...field} /></FormControl><FormMessage /></FormItem>)} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField control={form.control} name="assetTag" render={({ field }) => (<FormItem><FormLabel>Company Number</FormLabel><FormControl><Input placeholder="e.g. EQ-00124" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="equipmentCategory" render={({ field }) => (<FormItem><FormLabel>Category</FormLabel><FormControl><Input placeholder="Ladder, tool, fire equipment…" {...field} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="manufacturer" render={({ field }) => (<FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />

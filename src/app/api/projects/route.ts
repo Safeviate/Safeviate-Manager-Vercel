@@ -39,6 +39,7 @@ export async function POST(request: Request) {
       id: randomUUID(), name: incoming.name.trim(), objective: incoming.objective.trim(),
       status: incoming.status || 'Planning', health: incoming.health || 'On Track',
       ownerId: incoming.ownerId, organizationId: incoming.organizationId || null,
+      stakeholders: Array.isArray(incoming.stakeholders) ? incoming.stakeholders : [],
       startDate: incoming.startDate, targetDate: incoming.targetDate,
       mocId: incoming.mocId, mocNumber: incoming.mocNumber, mocTitle: incoming.mocTitle,
       phases: Array.isArray(incoming.phases) ? incoming.phases : [],

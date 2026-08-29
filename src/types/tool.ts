@@ -13,7 +13,8 @@ export interface Tool {
   manufacturer?: string;
   modelNumber?: string;
   serialNumber: string;
-  assetTag?: string;
+  assetTag?: string; // Company asset number / tag
+  equipmentCategory?: string;
   
   ownerId?: string; // Company ID, Client ID, or Employee ID
   ownerType: ToolOwnerType;

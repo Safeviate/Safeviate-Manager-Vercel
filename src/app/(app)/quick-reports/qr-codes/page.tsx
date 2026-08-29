@@ -2,7 +2,7 @@ import { headers } from 'next/headers';
 import { redirect, notFound } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import QRCode from 'qrcode';
-import { type LucideIcon, ShieldAlert, FileWarning, CheckCircle2 } from 'lucide-react';
+import { type LucideIcon, Building2, ShieldAlert, FileWarning, CheckCircle2 } from 'lucide-react';
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { isMasterTenantEmail, resolveTenantOverride } from '@/lib/server/tenant-access';
@@ -18,6 +18,7 @@ type QrTarget = {
   href: string;
   note: string;
   icon: LucideIcon;
+  type: 'safety' | 'technical' | 'facility';
 };
 
 export default async function QuickReportQrCodesPage() {
@@ -35,10 +36,10 @@ export default async function QuickReportQrCodesPage() {
     ? await resolveTenantOverride(new Request('https://safeviate.local', { headers: { cookie: cookieHeader } }), email, baseTenantId)
     : baseTenantId;
 
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    select: { id: true, name: true },
-  });
+  const [tenant, configRows] = await Promise.all([
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, name: true } }),
+    prisma.$queryRawUnsafe<{ data: Record<string, unknown> }[]>('SELECT data FROM tenant_configs WHERE tenant_id = $1 LIMIT 1', tenantId),
+  ]);
 
   if (!tenant) {
     notFound();
@@ -47,6 +48,7 @@ export default async function QuickReportQrCodesPage() {
   const host = headerList.get('x-forwarded-host') || headerList.get('host') || '';
   const proto = headerList.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
   const baseUrl = host ? `${proto}://${host}` : '';
+  const facilities = Array.isArray(configRows[0]?.data?.facilities) ? configRows[0].data.facilities as Record<string, unknown>[] : [];
 
   const qrTargets: QrTarget[] = [
     {
@@ -56,6 +58,7 @@ export default async function QuickReportQrCodesPage() {
       href: `/report/${encodeURIComponent(tenant.id)}/safety-report`,
       note: 'Use on desk mounts, dashboards, or wall placards.',
       icon: ShieldAlert,
+      type: 'safety',
     },
     {
       title: 'Technical Report',
@@ -64,7 +67,17 @@ export default async function QuickReportQrCodesPage() {
       href: `/report/${encodeURIComponent(tenant.id)}/technical-report`,
       note: 'Use on maintenance desks, hangars, or vehicle cards.',
       icon: FileWarning,
+      type: 'technical',
     },
+    ...facilities.filter((facility) => typeof facility.id === 'string' && typeof facility.name === 'string').map((facility) => ({
+      title: `${facility.name} Facility Report`,
+      placement: 'Facility, apron, workshop, or equipment area',
+      description: 'Direct link to the public facility maintenance report form, locked to this location.',
+      href: `/report/${encodeURIComponent(tenant.id)}/facility/${encodeURIComponent(facility.id as string)}`,
+      note: 'Use at the facility where people need to report infrastructure defects.',
+      icon: Building2,
+      type: 'facility' as const,
+    })),
   ];
 
   const qrCards = await Promise.all(
@@ -88,7 +101,7 @@ export default async function QuickReportQrCodesPage() {
       <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden border shadow-none print:border-0 print:shadow-none">
         <MainPageHeader
           title={`${tenant.name} QR Codes`}
-          description="Print the public safety or technical quick-report QR code for this organization. Use the print dialog to scale for desk mounts, dashboards, or wall mounts."
+          description="Print public safety, technical, and facility maintenance QR codes. Facility codes are locked to the relevant airport, heliport, or base."
           actions={<QrCodePrintMenu />}
         />
 
@@ -105,7 +118,9 @@ export default async function QuickReportQrCodesPage() {
 
           <style>{`@media print {
             html[data-qr-print-target="safety"] [data-qr-type="technical"],
-            html[data-qr-print-target="technical"] [data-qr-type="safety"] {
+            html[data-qr-print-target="technical"] [data-qr-type="safety"],
+            html[data-qr-print-target="safety"] [data-qr-type="facility"],
+            html[data-qr-print-target="technical"] [data-qr-type="facility"] {
               display: none !important;
             }
 
@@ -135,7 +150,7 @@ export default async function QuickReportQrCodesPage() {
           {qrCards.map((card) => {
             const Icon = card.icon;
             return (
-              <Card key={card.title} data-qr-type={card.title === 'Safety Report' ? 'safety' : 'technical'} className="qr-code-print-card overflow-hidden border shadow-none print:break-inside-avoid print:border">
+              <Card key={card.href} data-qr-type={card.type} className="qr-code-print-card overflow-hidden border shadow-none print:break-inside-avoid print:border">
                 <CardHeader className="border-b bg-muted/5 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full border bg-background">

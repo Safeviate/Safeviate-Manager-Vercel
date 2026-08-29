@@ -9,12 +9,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-type PrintTarget = 'safety' | 'technical' | 'both';
+type PrintTarget = 'safety' | 'technical' | 'all';
 
 const printOptions: Array<{ value: PrintTarget; label: string; icon: typeof ShieldAlert }> = [
   { value: 'safety', label: 'Safety Report QR Code', icon: ShieldAlert },
   { value: 'technical', label: 'Technical Report QR Code', icon: FileWarning },
-  { value: 'both', label: 'Both QR Codes', icon: Printer },
+  { value: 'all', label: 'All QR Codes', icon: Printer },
 ];
 
 export function QrCodePrintMenu() {

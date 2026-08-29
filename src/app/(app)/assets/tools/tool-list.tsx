@@ -56,7 +56,7 @@ export function ToolList({ data }: { data: Tool[] }) {
               <div className="min-w-0 space-y-1">
                 <p className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">{tool.name}</p>
                 <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  SN: {tool.serialNumber}
+                  {tool.assetTag ? `Company no. ${tool.assetTag} · ` : ''}SN: {tool.serialNumber}
                 </p>
               </div>
               {getStatusBadge(tool.status)}
@@ -68,8 +68,8 @@ export function ToolList({ data }: { data: Tool[] }) {
                   <p className="mt-1 text-sm font-semibold text-foreground">{tool.manufacturer || '-'}</p>
                 </div>
                 <div className="rounded-lg border bg-background px-3 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Ownership</p>
-                  <p className="mt-1 text-sm font-semibold uppercase tracking-widest text-foreground">{tool.ownerType.toLowerCase()}</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Category</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{tool.equipmentCategory || 'General equipment'}</p>
                 </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">

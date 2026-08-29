@@ -48,6 +48,12 @@ export interface ProjectRisk {
   status: 'Open' | 'Mitigating' | 'Closed';
 }
 
+export type ProjectStakeholderRole = 'Accountable' | 'Responsible' | 'Consulted' | 'Informed';
+export interface ProjectStakeholder {
+  personId: string;
+  role: ProjectStakeholderRole;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -55,6 +61,7 @@ export interface Project {
   status: ProjectStatus;
   health: ProjectHealth;
   ownerId?: string;
+  stakeholders?: ProjectStakeholder[];
   organizationId?: string | null;
   startDate?: string;
   targetDate?: string;
