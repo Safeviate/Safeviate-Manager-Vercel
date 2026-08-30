@@ -24,6 +24,8 @@ import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/com
 import type { Personnel, PilotProfile } from '../../users/personnel/page';
 import { usePermissions } from '@/hooks/use-permissions';
 
+type Facility = { id: string; name: string; type: string };
+
 interface DiaryTabProps {
   tenantId: string;
   startOpen: boolean;
@@ -43,6 +45,9 @@ export function DiaryTab({ tenantId, startOpen, onStartOpenChange }: DiaryTabPro
   const [isMilestone, setIsMilestone] = useState(false);
   const [closingSummary, setClosingSummary] = useState('');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedFacilityId, setSelectedFacilityId] = useState('');
+  const [selectedScenario, setSelectedScenario] = useState('Aircraft accident / incident');
+  const [facilities, setFacilities] = useState<Facility[]>([]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -63,9 +68,10 @@ export function DiaryTab({ tenantId, startOpen, onStartOpenChange }: DiaryTabPro
   useEffect(() => {
     const loadState = async () => {
       try {
-        const [triggersResponse, eventsResponse] = await Promise.all([
+        const [triggersResponse, eventsResponse, facilitiesResponse] = await Promise.all([
           fetch('/api/erp-state?category=triggers', { cache: 'no-store' }),
           fetch('/api/erp-state?category=events', { cache: 'no-store' }),
+          fetch('/api/facilities', { cache: 'no-store' }),
         ]);
 
         if (triggersResponse.ok) {
@@ -77,6 +83,10 @@ export function DiaryTab({ tenantId, startOpen, onStartOpenChange }: DiaryTabPro
           const payload = await eventsResponse.json();
           const parsedEvents = (payload.data || []) as ERPEvent[];
           setEvents(parsedEvents.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()));
+        }
+        if (facilitiesResponse.ok) {
+          const payload = await facilitiesResponse.json();
+          setFacilities(Array.isArray(payload.facilities) ? payload.facilities : []);
         }
       } catch {
         // ignore load errors
@@ -162,6 +172,7 @@ export function DiaryTab({ tenantId, startOpen, onStartOpenChange }: DiaryTabPro
     const isMock = formData.get('isMock') === 'on';
     const triggerId = selectedTriggerId || '';
     const trigger = triggers?.find(t => t.id === triggerId);
+    const facility = facilities.find((item) => item.id === selectedFacilityId);
     
     const title = formData.get('title') as string || (trigger ? `ERP: ${trigger.eventType}` : 'Emergency Response');
 
@@ -184,6 +195,9 @@ export function DiaryTab({ tenantId, startOpen, onStartOpenChange }: DiaryTabPro
         isMilestone: true
       });
     }
+    if (facility) {
+      initialLog.push({ id: uuidv4(), timestamp: new Date().toISOString(), description: `FACILITY RUN-CARD: ${selectedScenario} at ${facility.name}`, loggedBy: userProfile?.id || 'System', userName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'System', isMilestone: true });
+    }
 
     const newEvent: ERPEvent = {
       id: crypto.randomUUID(),
@@ -191,6 +205,9 @@ export function DiaryTab({ tenantId, startOpen, onStartOpenChange }: DiaryTabPro
       status: isMock ? 'Mock' : 'Active' as ERPEventStatus,
       startedAt: new Date().toISOString(),
       completedTasks: [],
+      facilityId: facility?.id,
+      facilityName: facility?.name,
+      scenario: facility ? selectedScenario : undefined,
       log: initialLog,
       collectedDocuments: []
     };
@@ -339,6 +356,27 @@ export function DiaryTab({ tenantId, startOpen, onStartOpenChange }: DiaryTabPro
                   </SelectContent>
                 </Select>
               </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="erp-facility">Facility</Label>
+                  <Select value={selectedFacilityId} onValueChange={setSelectedFacilityId}>
+                    <SelectTrigger id="erp-facility"><SelectValue placeholder="General company response" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">General company response</SelectItem>
+                      {facilities.map((facility) => <SelectItem key={facility.id} value={facility.id}>{facility.name} · {facility.type}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="erp-scenario">Facility scenario</Label>
+                  <Select value={selectedScenario} onValueChange={setSelectedScenario} disabled={!selectedFacilityId || selectedFacilityId === 'unassigned'}>
+                    <SelectTrigger id="erp-scenario"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {['Aircraft accident / incident', 'Fire, fuel spill, or hazardous material', 'Medical emergency', 'Security or unlawful interference', 'Severe weather or power failure', 'Heliport approach, departure, or water-rescue event'].map((scenario) => <SelectItem key={scenario} value={scenario}>{scenario}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="flex items-center gap-2 rounded-lg border bg-muted/20 px-3 py-3">
                 <Checkbox id="erp-mock" name="isMock" />
                 <div className="space-y-0.5">
@@ -437,6 +475,12 @@ export function DiaryTab({ tenantId, startOpen, onStartOpenChange }: DiaryTabPro
                 Started: {format(new Date(currentActiveOrViewing.startedAt), 'PPP p')}
                 {currentActiveOrViewing.endedAt && ` • Closed: ${format(new Date(currentActiveOrViewing.endedAt), 'PPP p')}`}
               </CardDescription>
+              {currentActiveOrViewing.facilityName && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Badge variant="outline">Facility: {currentActiveOrViewing.facilityName}</Badge>
+                  {currentActiveOrViewing.scenario && <Badge variant="outline">Scenario: {currentActiveOrViewing.scenario}</Badge>}
+                </div>
+              )}
             </CardHeader>
             <CardContent className="flex-1 p-0 overflow-hidden bg-background">
               <ScrollArea className="h-full">

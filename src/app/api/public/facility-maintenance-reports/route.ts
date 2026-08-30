@@ -7,6 +7,14 @@ function text(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function photos(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 5).map((photo) => {
+    const input = photo as Record<string, unknown>;
+    return { id: text(input?.id) || randomUUID(), name: text(input?.name), mimeType: text(input?.mimeType), dataUrl: text(input?.dataUrl) };
+  }).filter((photo) => photo.dataUrl.startsWith('data:image/') && photo.dataUrl.length <= 3_000_000);
+}
+
 export async function POST(request: Request) {
   try {
     const payload = await request.json().catch(() => null);
@@ -24,12 +32,18 @@ export async function POST(request: Request) {
     );
     const config = rows[0]?.data || {};
     const facilities = Array.isArray(config.facilities) ? config.facilities as Record<string, unknown>[] : [];
-    if (!facilities.some((facility) => text(facility.id) === facilityId)) return NextResponse.json({ error: 'Facility not found.' }, { status: 404 });
+    const facility = facilities.find((item) => text(item.id) === facilityId);
+    if (!facility) return NextResponse.json({ error: 'Facility not found.' }, { status: 404 });
+    const zoneId = text(input?.zoneId);
+    const zones = Array.isArray(facility.zones) ? facility.zones as Record<string, unknown>[] : [];
+    if (zoneId && !zones.some((zone) => text(zone.id) === zoneId)) return NextResponse.json({ error: 'Zone not found for this facility.' }, { status: 400 });
 
     const now = new Date().toISOString();
     const report = {
       id: randomUUID(),
+      reportNumber: `FMR-${randomUUID().slice(0, 8).toUpperCase()}`,
       facilityId,
+      zoneId,
       title,
       category: text(input?.category) || 'General facility',
       description,
@@ -38,6 +52,7 @@ export async function POST(request: Request) {
       status: 'Open',
       reportedBy: text(input?.reportedBy) || context.userName,
       reportedByEmail: text(input?.reportedByEmail) || context.email || '',
+      photoAttachments: photos(input?.photoAttachments),
       createdAt: now,
       updatedAt: now,
     };

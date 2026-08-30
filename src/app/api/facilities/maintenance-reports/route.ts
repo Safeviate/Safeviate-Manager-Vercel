@@ -19,6 +19,8 @@ type FacilityMaintenanceReport = {
   verificationNotes?: string;
   reportedBy?: string;
   reportedByEmail?: string;
+  reportNumber?: string;
+  photoAttachments?: { id: string; name: string; mimeType: string; dataUrl: string }[];
   createdAt: string;
   updatedAt: string;
   closedAt?: string;
@@ -62,6 +64,8 @@ function sanitizeReport(value: unknown): FacilityMaintenanceReport | null {
     verificationNotes: text(input.verificationNotes),
     reportedBy: text(input.reportedBy),
     reportedByEmail: text(input.reportedByEmail),
+    reportNumber: text(input.reportNumber),
+    photoAttachments: Array.isArray(input.photoAttachments) ? input.photoAttachments.slice(0, 5).map((photo) => ({ id: text((photo as Record<string, unknown>)?.id) || randomUUID(), name: text((photo as Record<string, unknown>)?.name), mimeType: text((photo as Record<string, unknown>)?.mimeType), dataUrl: text((photo as Record<string, unknown>)?.dataUrl) })).filter((photo) => photo.dataUrl.startsWith('data:image/')) : [],
     createdAt: toDate(input.createdAt) || now,
     updatedAt: now,
     closedAt: status === 'Closed' ? closedAt || now : '',

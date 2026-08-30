@@ -52,6 +52,9 @@ export interface ERPEvent {
   startedAt: string;
   endedAt?: string;
   summary?: string;
+  facilityId?: string;
+  facilityName?: string;
+  scenario?: string;
   completedTasks?: string[];
   collectedDocuments?: ERPCollectedDocument[];
   log: ERPLogEntry[];

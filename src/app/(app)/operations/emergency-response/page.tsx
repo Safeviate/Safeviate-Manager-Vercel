@@ -8,6 +8,7 @@ import { ContactsTab } from './contacts-tab';
 import { TriggersTab } from './triggers-tab';
 import { MediaTab } from './media-tab';
 import { DiaryTab } from './diary-tab';
+import { FacilityResponseTab } from './facility-response-tab';
 import { PhasesTab } from './phases-tab';
 import { DocumentsTab } from './documents-tab';
 import { EstimatorTab } from './estimator-tab';
@@ -17,7 +18,7 @@ import type { ExternalOrganization } from '@/types/quality';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Building2, ChevronDown, Play } from 'lucide-react';
+import { Building2, ChevronDown, MapPinned, Play } from 'lucide-react';
 import { HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { CARD_HEADER_BAND_CLASS } from '@/components/page-header';
@@ -51,6 +52,7 @@ export default function EmergencyResponsePage() {
 
   const tabs = [
     { value: 'diary', label: 'Live Diary', icon: ScrollText },
+    { value: 'facilities', label: 'Facility Run-Cards', icon: MapPinned },
     { value: 'estimator', label: 'Safety Estimator', icon: Calculator },
     { value: 'documents', label: 'Evidence & Docs', icon: FileSearch },
     { value: 'contacts', label: 'Emergency Contacts', icon: Phone },
@@ -152,6 +154,9 @@ export default function EmergencyResponsePage() {
           <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
             <TabsContent value="diary" className="m-0 h-full min-h-0 overflow-y-auto no-scrollbar pb-10">
               <DiaryTab tenantId={tenantId || ''} startOpen={isStartOpen} onStartOpenChange={setIsStartOpen} />
+            </TabsContent>
+            <TabsContent value="facilities" className="m-0 h-full min-h-0 overflow-y-auto no-scrollbar pb-10">
+              <FacilityResponseTab />
             </TabsContent>
             <TabsContent value="estimator" className="m-0 h-full min-h-0 overflow-y-auto no-scrollbar pb-10">
               <EstimatorTab />
