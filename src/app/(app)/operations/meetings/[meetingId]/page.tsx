@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { createClientId } from '@/lib/client/create-client-id';
 import type { MeetingActionItem, MeetingRecordData } from '@/types/meeting';
 
 type PersonnelLite = {
@@ -44,7 +45,7 @@ const getPersonName = (person?: PersonnelLite) => {
 const ACTION_STATUS_OPTIONS: Array<MeetingActionItem['status']> = ['Open', 'In Progress', 'Completed', 'Cancelled'];
 
 const createActionItem = (item?: Partial<MeetingActionItem>): MeetingActionItem => ({
-  id: item?.id || crypto.randomUUID(),
+  id: item?.id || createClientId(),
   description: item?.description || '',
   assigneeId: item?.assigneeId || '',
   assigneeName: item?.assigneeName || '',
@@ -60,7 +61,7 @@ const toDateInput = (value?: string | null) => {
 };
 
 const createDiscussionPoint = (point?: Partial<DiscussionPointDraft>): DiscussionPointDraft => ({
-  id: point?.id || crypto.randomUUID(),
+  id: point?.id || createClientId(),
   text: point?.text || '',
   minutes: point?.minutes || '',
 });

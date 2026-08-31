@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
+import { createClientId } from '@/lib/client/create-client-id';
 import Link from 'next/link';
 import type { MeetingActionItem, MeetingAgendaItem, MeetingDiscussionPoint, MeetingRecordData, MeetingStatus, MeetingType } from '@/types/meeting';
 
@@ -70,13 +71,13 @@ const getPersonName = (person?: PersonnelLite) => {
 };
 
 const createDiscussionPoint = (point?: Partial<MeetingDiscussionPoint>): MeetingDiscussionPoint => ({
-  id: point?.id || crypto.randomUUID(),
+  id: point?.id || createClientId(),
   text: point?.text || '',
   minutes: point?.minutes || '',
 });
 
 const createAgendaItem = (item?: Partial<MeetingAgendaItem>): MeetingAgendaItem => ({
-  id: item?.id || crypto.randomUUID(),
+  id: item?.id || createClientId(),
   title: item?.title || '',
   notes: item?.notes || '',
   discussionPoints: Array.isArray(item?.discussionPoints) && item.discussionPoints.length > 0
@@ -86,7 +87,7 @@ const createAgendaItem = (item?: Partial<MeetingAgendaItem>): MeetingAgendaItem 
 });
 
 const createActionItem = (item?: Partial<MeetingActionItem>): MeetingActionItem => ({
-  id: item?.id || crypto.randomUUID(),
+  id: item?.id || createClientId(),
   description: item?.description || '',
   assigneeId: item?.assigneeId || '',
   assigneeName: item?.assigneeName || '',
@@ -95,7 +96,7 @@ const createActionItem = (item?: Partial<MeetingActionItem>): MeetingActionItem 
 });
 
 const createBlankMeeting = (meetingNumber: string): MeetingFormState => ({
-  id: crypto.randomUUID(),
+  id: createClientId(),
   meetingNumber,
   title: '',
   meetingType: 'Operations',

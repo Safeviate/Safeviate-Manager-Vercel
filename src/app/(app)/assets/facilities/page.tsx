@@ -16,6 +16,7 @@ import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-s
 import { usePermissions } from '@/hooks/use-permissions';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
 import { useToast } from '@/hooks/use-toast';
+import { createClientId } from '@/lib/client/create-client-id';
 
 type FacilityZone = { id: string; name: string; category?: string; notes?: string };
 type FacilityAsset = { id: string; name: string; category?: string; zoneId?: string; status?: string; toolId?: string; companyNumber?: string };
@@ -24,14 +25,6 @@ type Facility = { id: string; name: string; type: string; code?: string; locatio
 type CompanyDocument = { id: string; name: string; url: string; type: 'file' | 'image' };
 type RegisteredTool = { id: string; name: string; serialNumber: string; assetTag?: string; equipmentCategory?: string; status: string };
 type FacilityMaintenanceReport = { id: string; facilityId: string; zoneId?: string; assetId?: string; title: string; category: string; description?: string; priority: 'Low' | 'Medium' | 'High' | 'Critical'; operationalImpact: 'Serviceable' | 'Restricted' | 'Out of service'; status: 'Open' | 'Assigned' | 'In progress' | 'Closed'; assignedTo?: string; dueDate?: string; verificationNotes?: string; createdAt: string; updatedAt: string; closedAt?: string };
-
-function createClientId() {
-  const cryptoApi = typeof globalThis === 'undefined' ? undefined : globalThis.crypto;
-  if (typeof cryptoApi?.randomUUID === 'function') return cryptoApi.randomUUID();
-
-  const random = Math.random().toString(36).slice(2, 12);
-  return `facility-${Date.now().toString(36)}-${random}`;
-}
 
 const blankFacility = (): Facility => ({ id: createClientId(), name: '', type: 'Airport', code: '', location: '', status: 'Operational', notes: '', zones: [], assets: [], documents: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
 
