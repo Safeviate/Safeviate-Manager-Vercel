@@ -9,10 +9,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { createClientId } from '@/lib/client/create-client-id';
 import type { QualityChecklistSection, QualityChecklistTemplate } from '@/types/quality';
 
-const newItem = () => ({ id: crypto.randomUUID(), text: '', type: 'YesNoNA' as const });
-const newSection = (): QualityChecklistSection => ({ id: crypto.randomUUID(), title: '', items: [newItem()] });
+const newItem = () => ({ id: createClientId(), text: '', type: 'YesNoNA' as const });
+const newSection = (): QualityChecklistSection => ({ id: createClientId(), title: '', items: [newItem()] });
 
 export function ChecklistTemplateDialog() {
   const { toast } = useToast();
@@ -31,7 +32,7 @@ export function ChecklistTemplateDialog() {
     if (!title.trim() || !cleanedSections.length) { toast({ variant: 'destructive', title: 'Add a title and at least one task' }); return; }
     setSaving(true);
     try {
-      const template: QualityChecklistTemplate = { id: crypto.randomUUID(), title: title.trim(), category, sections: cleanedSections };
+      const template: QualityChecklistTemplate = { id: createClientId(), title: title.trim(), category, sections: cleanedSections };
       const response = await fetch('/api/quality-checklists', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template }) });
       if (!response.ok) throw new Error('Unable to save checklist template.');
       window.dispatchEvent(new Event('safeviate-quality-checklists-updated'));

@@ -12,6 +12,7 @@ import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-s
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
 import { ArchiveActionButton } from '@/components/record-action-buttons';
+import { createClientId } from '@/lib/client/create-client-id';
 import type { QualityChecklistRun, QualityChecklistTemplate } from '@/types/quality';
 
 export default function QualityChecklistsPage() {
@@ -40,7 +41,7 @@ export default function QualityChecklistsPage() {
   }, []);
 
   const startChecklist = async (template: QualityChecklistTemplate) => {
-    const checklist: QualityChecklistRun = { id: crypto.randomUUID(), templateId: template.id, templateTitle: template.title, title: template.title, status: 'In Progress', startedAt: new Date().toISOString(), responses: [] };
+    const checklist: QualityChecklistRun = { id: createClientId(), templateId: template.id, templateTitle: template.title, title: template.title, status: 'In Progress', startedAt: new Date().toISOString(), responses: [] };
     const response = await fetch('/api/quality-checklists', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ checklist }) });
     if (!response.ok) { toast({ variant: 'destructive', title: 'Unable to start checklist', description: 'The checklist run was not created.' }); return; }
     const payload = await response.json();
